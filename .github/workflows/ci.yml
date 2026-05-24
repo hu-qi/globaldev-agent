@@ -48,9 +48,9 @@ jobs:
 
     env:
       GMI_BASE_URL: https://api.gmi-serving.com/v1
-      GMI_MODEL: deepseek-ai/DeepSeek-R1
-      GMI_TEMPERATURE: '0.2'
-      GMI_MAX_TOKENS: '128'
+      GMI_MODEL: deepseek-ai/DeepSeek-V4-Pro
+      GMI_TEMPERATURE: '0.4'
+      GMI_MAX_TOKENS: '128000'
 
     steps:
       - name: Checkout repository
