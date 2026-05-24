@@ -2,9 +2,11 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
   pull_request:
-    branches: [main]
+    branches:
+      - main
   workflow_dispatch:
 
 jobs:
@@ -14,12 +16,10 @@ jobs:
     timeout-minutes: 15
 
     env:
-      GMI_BASE_URL: ${{ secrets.GMI_BASE_URL || 'https://api.gmi-serving.com/v1' }}
-      GMI_API_KEY: ${{ secrets.GMI_API_KEY }}
-      GMI_MODEL: ${{ secrets.GMI_MODEL || 'deepseek-ai/DeepSeek-R1' }}
+      GMI_BASE_URL: https://api.gmi-serving.com/v1
+      GMI_MODEL: deepseek-ai/DeepSeek-R1
       GMI_TEMPERATURE: '0.2'
-      GMI_MAX_TOKENS: '512'
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GMI_MAX_TOKENS: '128'
 
     steps:
       - name: Checkout repository
@@ -45,4 +45,11 @@ jobs:
         run: pnpm build
 
       - name: Verify GMI Cloud Inference Engine API
-        run: pnpm ci:gmi-smoke
+        env:
+          GMI_API_KEY: ${{ secrets.GMI_API_KEY }}
+          GMI_BASE_URL: ${{ secrets.GMI_BASE_URL }}
+          GMI_MODEL: ${{ secrets.GMI_MODEL }}
+        run: |
+          if [ -z "$GMI_BASE_URL" ]; then export GMI_BASE_URL="https://api.gmi-serving.com/v1"; fi
+          if [ -z "$GMI_MODEL" ]; then export GMI_MODEL="deepseek-ai/DeepSeek-R1"; fi
+          pnpm ci:gmi-smoke
