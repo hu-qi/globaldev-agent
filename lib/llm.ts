@@ -3,29 +3,60 @@ export type ChatMessage = {
   content: string;
 };
 
+export type GmiCallTrace = {
+  provider: 'GMI Cloud Inference Engine';
+  endpoint: string;
+  model: string;
+  temperature: number;
+  maxTokens: number;
+  responseFormat: 'json_object';
+  scenes: string[];
+};
+
+const gmiBaseUrl = process.env.GMI_BASE_URL || 'https://api.gmi-serving.com/v1';
+const gmiModel = process.env.GMI_MODEL || 'deepseek-ai/DeepSeek-R1';
+const gmiTemperature = Number(process.env.GMI_TEMPERATURE || 0.4);
+const gmiMaxTokens = Number(process.env.GMI_MAX_TOKENS || 4000);
+
+export const gmiCallTrace: GmiCallTrace = {
+  provider: 'GMI Cloud Inference Engine',
+  endpoint: `${gmiBaseUrl}/chat/completions`,
+  model: gmiModel,
+  temperature: gmiTemperature,
+  maxTokens: gmiMaxTokens,
+  responseFormat: 'json_object',
+  scenes: [
+    'Product Analyst Agent analyzes GitHub README and repo metadata',
+    'Market Positioning Agent creates overseas positioning and personas',
+    'Content Agent generates Product Hunt, Hacker News, Reddit, X, and LinkedIn launch content',
+    'Feedback Agent clusters GitHub Issues into user concerns',
+    'Growth PM Agent converts insights into prioritized growth tasks'
+  ]
+};
+
 export async function generateText(messages: ChatMessage[]): Promise<string | null> {
-  const apiKey = process.env.LLM_API_KEY;
-  const baseUrl = process.env.LLM_BASE_URL || 'https://api.openai.com/v1';
-  const model = process.env.LLM_MODEL || 'gpt-4o-mini';
+  const gmiKey = process.env.GMI_API_KEY;
+  if (!gmiKey) return null;
 
-  if (!apiKey) return null;
-
-  const response = await fetch(`${baseUrl.replace(/\/$/, '')}/chat/completions`, {
+  const response = await fetch(`${gmiBaseUrl.replace(/\/$/, '')}/chat/completions`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`
+      Authorization: `Bearer ${gmiKey}`
     },
     body: JSON.stringify({
-      model,
+      model: gmiModel,
       messages,
-      temperature: 0.4
+      temperature: gmiTemperature,
+      max_tokens: gmiMaxTokens,
+      response_format: { type: 'json_object' },
+      context_length_exceeded_behavior: 'truncate'
     })
   });
 
   if (!response.ok) {
     const detail = await response.text();
-    throw new Error(`LLM request failed: ${response.status} ${detail}`);
+    throw new Error(`GMI Cloud request failed: ${response.status} ${detail}`);
   }
 
   const data = await response.json();
