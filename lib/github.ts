@@ -1,0 +1,106 @@
+import { Octokit } from '@octokit/rest';
+
+export type RepoRef = {
+  owner: string;
+  repo: string;
+};
+
+export type RepoSnapshot = {
+  ref: RepoRef;
+  htmlUrl: string;
+  name: string;
+  description: string | null;
+  stars: number;
+  forks: number;
+  openIssues: number;
+  language: string | null;
+  topics: string[];
+  defaultBranch: string;
+  readme: string;
+  issues: Array<{
+    title: string;
+    body: string | null;
+    labels: string[];
+    comments: number;
+    url: string;
+  }>;
+};
+
+function octokit() {
+  return new Octokit({ auth: process.env.GITHUB_TOKEN || undefined });
+}
+
+export function parseGitHubRepo(input: string): RepoRef {
+  const trimmed = input.trim();
+  const shorthand = trimmed.match(/^([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+)$/);
+  if (shorthand) return { owner: shorthand[1], repo: shorthand[2].replace(/\.git$/, '') };
+
+  const url = new URL(trimmed);
+  if (!url.hostname.includes('github.com')) {
+    throw new Error('Please provide a GitHub repository URL.');
+  }
+
+  const [owner, repo] = url.pathname.split('/').filter(Boolean);
+  if (!owner || !repo) {
+    throw new Error('GitHub URL must include owner and repository name.');
+  }
+
+  return { owner, repo: repo.replace(/\.git$/, '') };
+}
+
+export async function fetchRepoSnapshot(input: string): Promise<RepoSnapshot> {
+  const ref = parseGitHubRepo(input);
+  const client = octokit();
+
+  const repoResponse = await client.repos.get({ owner: ref.owner, repo: ref.repo });
+  const repo = repoResponse.data;
+
+  let readme = '';
+  try {
+    const readmeResponse = await client.repos.getReadme({ owner: ref.owner, repo: ref.repo });
+    if (!Array.isArray(readmeResponse.data) && 'content' in readmeResponse.data) {
+      readme = Buffer.from(readmeResponse.data.content, 'base64').toString('utf8');
+    }
+  } catch {
+    readme = repo.description || '';
+  }
+
+  let issues: RepoSnapshot['issues'] = [];
+  try {
+    const issueResponse = await client.issues.listForRepo({
+      owner: ref.owner,
+      repo: ref.repo,
+      state: 'open',
+      per_page: 12,
+      sort: 'updated',
+      direction: 'desc'
+    });
+
+    issues = issueResponse.data
+      .filter((issue) => !issue.pull_request)
+      .map((issue) => ({
+        title: issue.title,
+        body: issue.body,
+        labels: issue.labels.map((label) => (typeof label === 'string' ? label : label.name || '')).filter(Boolean),
+        comments: issue.comments,
+        url: issue.html_url
+      }));
+  } catch {
+    issues = [];
+  }
+
+  return {
+    ref,
+    htmlUrl: repo.html_url,
+    name: repo.name,
+    description: repo.description,
+    stars: repo.stargazers_count,
+    forks: repo.forks_count,
+    openIssues: repo.open_issues_count,
+    language: repo.language,
+    topics: repo.topics || [],
+    defaultBranch: repo.default_branch,
+    readme,
+    issues
+  };
+}
