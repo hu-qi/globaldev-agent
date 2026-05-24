@@ -8,7 +8,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "ci:gmi-smoke": "node scripts/gmi-smoke.mjs"
   },
   "dependencies": {
     "@octokit/rest": "^20.1.1",
