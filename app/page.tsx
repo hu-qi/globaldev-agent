@@ -50,7 +50,7 @@ type LaunchKit = {
   growthTasks: GrowthTask[];
 };
 
-const sampleRepo = 'https://github.com/vercel/next.js';
+const sampleRepo = 'https://github.com/hu-qi/globaldev-agent';
 
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
