@@ -1,8 +1,8 @@
 const baseUrl = process.env.GMI_BASE_URL || 'https://api.gmi-serving.com/v1';
 const apiKey = process.env.GMI_API_KEY;
-const model = process.env.GMI_MODEL || 'deepseek-ai/DeepSeek-R1';
-const temperature = Number(process.env.GMI_TEMPERATURE || 0.2);
-const maxTokens = Number(process.env.GMI_MAX_TOKENS || 128);
+const model = process.env.GMI_MODEL || 'deepseek-ai/DeepSeek-V4-Pro';
+const temperature = Number(process.env.GMI_TEMPERATURE || 0.4);
+const maxTokens = Number(process.env.GMI_MAX_TOKENS || 128000);
 
 if (!apiKey) {
   console.log('GMI_API_KEY is not configured. Skipping live GMI Cloud smoke test.');
