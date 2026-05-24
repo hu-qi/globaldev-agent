@@ -22,9 +22,9 @@ Required Vercel environment variables:
 ```text
 GMI_BASE_URL=https://api.gmi-serving.com/v1
 GMI_API_KEY=your_new_gmi_cloud_api_key
-GMI_MODEL=deepseek-ai/DeepSeek-R1
+GMI_MODEL=deepseek-ai/DeepSeek-V4-Pro
 GMI_TEMPERATURE=0.4
-GMI_MAX_TOKENS=4000
+GMI_MAX_TOKENS=128000
 ```
 
 Optional environment variable:
@@ -43,7 +43,7 @@ This project explicitly calls **GMI Cloud Inference Engine** for all LLM reasoni
 - API style: OpenAI-compatible Chat Completions
 - Endpoint: `https://api.gmi-serving.com/v1/chat/completions`
 - API key variable: `GMI_API_KEY`
-- Default model variable: `GMI_MODEL=deepseek-ai/DeepSeek-R1`
+- Default model variable: `GMI_MODEL=deepseek-ai/DeepSeek-V4-Pro`
 - Server-side only: the API key is read from `.env.local` and is never exposed to browser code
 
 ### API calling scenes
@@ -68,7 +68,7 @@ The app calls GMI Cloud with these parameters:
     { "role": "user", "content": "Repository snapshot and JSON schema request" }
   ],
   "temperature": 0.4,
-  "max_tokens": 4000,
+  "max_tokens": 128000,
   "response_format": { "type": "json_object" },
   "context_length_exceeded_behavior": "truncate"
 }
@@ -179,9 +179,9 @@ GITHUB_TOKEN=
 # Required for competition submission: GMI Cloud Inference Engine
 GMI_BASE_URL=https://api.gmi-serving.com/v1
 GMI_API_KEY=
-GMI_MODEL=deepseek-ai/DeepSeek-R1
+GMI_MODEL=deepseek-ai/DeepSeek-V4-Pro
 GMI_TEMPERATURE=0.4
-GMI_MAX_TOKENS=4000
+GMI_MAX_TOKENS=128000
 ```
 
 When `GMI_API_KEY` is not set, the app returns a high-quality mocked Global Launch Kit for demo purposes. For the official competition demo and submitted deployment, configure `GMI_API_KEY` so all agent reasoning uses GMI Cloud Inference Engine.
