@@ -1,0 +1,161 @@
+import { fetchRepoSnapshot, type RepoSnapshot } from './github';
+import { generateText, safeJsonParse } from './llm';
+
+export type LaunchKit = {
+  repo: {
+    name: string;
+    url: string;
+    description: string | null;
+    language: string | null;
+    stars: number;
+    topics: string[];
+  };
+  timeline: Array<{
+    agent: string;
+    status: 'completed';
+    summary: string;
+  }>;
+  product: {
+    category: string;
+    coreValue: string;
+    targetUsers: string[];
+    differentiators: string[];
+  };
+  positioning: {
+    oneLiner: string;
+    narrative: string;
+    personas: Array<{ name: string; need: string }>;
+  };
+  launchContent: {
+    productHunt: string;
+    hackerNews: string;
+    reddit: string;
+    xThread: string[];
+    linkedin: string;
+  };
+  issueInsights: {
+    themes: string[];
+    concerns: string[];
+    sourceIssueCount: number;
+  };
+  growthTasks: Array<{
+    title: string;
+    priority: 'High' | 'Medium' | 'Low';
+    reason: string;
+  }>;
+};
+
+function compactRepo(snapshot: RepoSnapshot) {
+  return {
+    name: snapshot.name,
+    description: snapshot.description,
+    language: snapshot.language,
+    stars: snapshot.stars,
+    forks: snapshot.forks,
+    openIssues: snapshot.openIssues,
+    topics: snapshot.topics,
+    readme: snapshot.readme.slice(0, 12000),
+    issues: snapshot.issues
+  };
+}
+
+function fallbackLaunchKit(snapshot: RepoSnapshot): LaunchKit {
+  const productName = snapshot.name;
+  const language = snapshot.language || 'developer';
+  const hasIssues = snapshot.issues.length > 0;
+
+  return {
+    repo: {
+      name: productName,
+      url: snapshot.htmlUrl,
+      description: snapshot.description,
+      language: snapshot.language,
+      stars: snapshot.stars,
+      topics: snapshot.topics
+    },
+    timeline: [
+      { agent: 'Repo Analyzer', status: 'completed', summary: `Read ${productName} metadata, README, and ${snapshot.issues.length} recent issues.` },
+      { agent: 'Product Analyst', status: 'completed', summary: 'Extracted product value, target developers, and likely category.' },
+      { agent: 'Market Positioning Agent', status: 'completed', summary: 'Created global developer positioning and overseas personas.' },
+      { agent: 'Content Agent', status: 'completed', summary: 'Generated Product Hunt, Hacker News, Reddit, X, and LinkedIn launch drafts.' },
+      { agent: 'Feedback Agent', status: 'completed', summary: hasIssues ? 'Clustered GitHub issues into feedback themes.' : 'No open issues found; used README-based assumptions.' },
+      { agent: 'Growth PM Agent', status: 'completed', summary: 'Converted insights into prioritized launch and product growth tasks.' }
+    ],
+    product: {
+      category: `${language} developer tool`,
+      coreValue: snapshot.description || `${productName} helps developers solve a focused workflow problem more efficiently.`,
+      targetUsers: ['Open-source maintainers', 'Developer tool builders', 'Indie hackers', 'Technical founders'],
+      differentiators: [
+        'Starts from the actual repository instead of a generic product brief',
+        'Connects developer feedback with global launch messaging',
+        'Turns growth insights into GitHub-native execution tasks'
+      ]
+    },
+    positioning: {
+      oneLiner: `${productName}: a developer-first tool ready for global launch.`,
+      narrative: `For global developers who discover products through GitHub, communities, and technical content, ${productName} should be positioned around practical workflow value, clear documentation, and transparent roadmap signals.`,
+      personas: [
+        { name: 'Open-source maintainer', need: 'Needs tools that are easy to evaluate, install, and recommend.' },
+        { name: 'Startup developer', need: 'Wants practical tooling that saves time without adding workflow complexity.' },
+        { name: 'DevRel lead', need: 'Needs crisp messaging, examples, and community-ready assets.' }
+      ]
+    },
+    launchContent: {
+      productHunt: `Meet ${productName} — a developer-first project built to make ${snapshot.description || 'technical workflows'} easier. We are launching globally and looking for feedback from builders, maintainers, and technical teams.`,
+      hackerNews: `Show HN: ${productName} — ${snapshot.description || 'a developer tool from GitHub'}\n\nI built/maintain ${productName} to solve a recurring developer workflow problem. The project is open for feedback, especially around README clarity, onboarding, and real-world use cases.`,
+      reddit: `I am preparing ${productName} for a broader developer audience and would love feedback from people who have solved similar workflow problems. The project is on GitHub, and I am especially interested in whether the README explains the value clearly enough.`,
+      xThread: [
+        `1/ Preparing ${productName} for a global developer launch.`,
+        `2/ The core idea: ${snapshot.description || 'turn a focused developer workflow into a simpler experience.'}`,
+        '3/ We are improving README clarity, onboarding examples, and community feedback loops.',
+        '4/ Looking for feedback from open-source maintainers and developer tool builders.'
+      ],
+      linkedin: `${productName} is preparing for a global developer launch. The goal is to make the project easier to understand, evaluate, and adopt for overseas developers through clearer positioning, better documentation, and community-native launch content.`
+    },
+    issueInsights: {
+      themes: hasIssues ? ['Documentation clarity', 'Feature requests', 'Integration questions', 'Bug reports'] : ['README clarity', 'Use case explanation', 'Onboarding examples'],
+      concerns: hasIssues ? snapshot.issues.slice(0, 4).map((issue) => issue.title) : ['Need clearer quickstart', 'Need comparison with alternatives', 'Need concrete usage examples'],
+      sourceIssueCount: snapshot.issues.length
+    },
+    growthTasks: [
+      { title: 'Rewrite README quickstart for overseas developers', priority: 'High', reason: 'GitHub README is the first conversion surface for global developers.' },
+      { title: 'Create Show HN and Product Hunt launch drafts', priority: 'High', reason: 'These channels are highly relevant for developer tool discovery.' },
+      { title: 'Add use-case examples for target personas', priority: 'Medium', reason: 'Examples reduce evaluation friction for new users.' },
+      { title: 'Create a comparison section against common alternatives', priority: 'Medium', reason: 'Global users need fast differentiation before trying a new tool.' },
+      { title: 'Convert top feedback themes into GitHub Issues', priority: 'Low', reason: 'This keeps growth insights connected to the engineering workflow.' }
+    ]
+  };
+}
+
+export async function runGlobalDevAgent(repoUrl: string): Promise<LaunchKit> {
+  const snapshot = await fetchRepoSnapshot(repoUrl);
+  const fallback = fallbackLaunchKit(snapshot);
+
+  const response = await generateText([
+    {
+      role: 'system',
+      content: 'You are GlobalDev Agent, a senior AI DevRel strategist. Return only valid JSON matching the requested shape.'
+    },
+    {
+      role: 'user',
+      content: `Analyze this GitHub repository and create a Global Launch Kit for overseas developer growth.\n\nReturn JSON with this exact structure:\n{
+  "product": {"category": string, "coreValue": string, "targetUsers": string[], "differentiators": string[]},
+  "positioning": {"oneLiner": string, "narrative": string, "personas": [{"name": string, "need": string}]},
+  "launchContent": {"productHunt": string, "hackerNews": string, "reddit": string, "xThread": string[], "linkedin": string},
+  "issueInsights": {"themes": string[], "concerns": string[], "sourceIssueCount": number},
+  "growthTasks": [{"title": string, "priority": "High" | "Medium" | "Low", "reason": string}]
+}\n\nRepository snapshot:\n${JSON.stringify(compactRepo(snapshot), null, 2)}`
+    }
+  ]);
+
+  const generated = safeJsonParse<Partial<LaunchKit>>(response, {});
+
+  return {
+    ...fallback,
+    product: generated.product || fallback.product,
+    positioning: generated.positioning || fallback.positioning,
+    launchContent: generated.launchContent || fallback.launchContent,
+    issueInsights: generated.issueInsights || fallback.issueInsights,
+    growthTasks: generated.growthTasks || fallback.growthTasks
+  };
+}
