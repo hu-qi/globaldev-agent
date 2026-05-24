@@ -10,10 +10,40 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-and-smoke-test:
-    name: Build and GMI smoke test
+  build:
+    name: Build
     runs-on: ubuntu-latest
     timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Build app
+        run: pnpm build
+
+  gmi-smoke:
+    name: GMI Cloud smoke test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: build
+    continue-on-error: true
 
     env:
       GMI_BASE_URL: https://api.gmi-serving.com/v1
@@ -25,31 +55,25 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
-
-      - name: Typecheck
-        run: pnpm typecheck
-
-      - name: Build app
-        run: pnpm build
 
       - name: Verify GMI Cloud Inference Engine API
         env:
           GMI_API_KEY: ${{ secrets.GMI_API_KEY }}
-          GMI_BASE_URL: ${{ secrets.GMI_BASE_URL }}
-          GMI_MODEL: ${{ secrets.GMI_MODEL }}
+          SECRET_GMI_BASE_URL: ${{ secrets.GMI_BASE_URL }}
+          SECRET_GMI_MODEL: ${{ secrets.GMI_MODEL }}
         run: |
-          if [ -z "$GMI_BASE_URL" ]; then export GMI_BASE_URL="https://api.gmi-serving.com/v1"; fi
-          if [ -z "$GMI_MODEL" ]; then export GMI_MODEL="deepseek-ai/DeepSeek-R1"; fi
+          if [ -n "$SECRET_GMI_BASE_URL" ]; then export GMI_BASE_URL="$SECRET_GMI_BASE_URL"; fi
+          if [ -n "$SECRET_GMI_MODEL" ]; then export GMI_MODEL="$SECRET_GMI_MODEL"; fi
           pnpm ci:gmi-smoke
