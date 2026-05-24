@@ -2,6 +2,18 @@
 
 import { FormEvent, useState } from 'react';
 
+type GrowthTask = {
+  title: string;
+  priority: 'High' | 'Medium' | 'Low';
+  reason: string;
+};
+
+type CreatedIssue = {
+  number: number;
+  title: string;
+  url: string;
+};
+
 type LaunchKit = {
   repo: {
     name: string;
@@ -35,7 +47,7 @@ type LaunchKit = {
     concerns: string[];
     sourceIssueCount: number;
   };
-  growthTasks: Array<{ title: string; priority: 'High' | 'Medium' | 'Low'; reason: string }>;
+  growthTasks: GrowthTask[];
 };
 
 const sampleRepo = 'https://github.com/vercel/next.js';
@@ -58,11 +70,16 @@ export default function Home() {
   const [kit, setKit] = useState<LaunchKit | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [creatingIssueTitle, setCreatingIssueTitle] = useState<string | null>(null);
+  const [createdIssues, setCreatedIssues] = useState<Record<string, CreatedIssue>>({});
+  const [issueError, setIssueError] = useState<string | null>(null);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setLoading(true);
     setError(null);
+    setIssueError(null);
+    setCreatedIssues({});
     setKit(null);
 
     try {
@@ -81,6 +98,31 @@ export default function Home() {
     }
   }
 
+  async function createGitHubIssue(task: GrowthTask) {
+    setCreatingIssueTitle(task.title);
+    setIssueError(null);
+
+    try {
+      const response = await fetch('/api/github/issues', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          repoUrl,
+          title: task.title,
+          priority: task.priority,
+          reason: task.reason
+        })
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Failed to create GitHub Issue.');
+      setCreatedIssues((current) => ({ ...current, [task.title]: data.issue }));
+    } catch (err) {
+      setIssueError(err instanceof Error ? err.message : 'Failed to create GitHub Issue.');
+    } finally {
+      setCreatingIssueTitle(null);
+    }
+  }
+
   return (
     <main className="min-h-screen bg-mist px-6 py-10">
       <div className="mx-auto max-w-7xl">
@@ -89,7 +131,7 @@ export default function Home() {
             <p className="mb-4 text-sm font-semibold uppercase tracking-[0.3em] text-blue-300">GlobalDev Agent</p>
             <h1 className="mb-5 text-4xl font-bold tracking-tight md:text-6xl">From README to Global Launch.</h1>
             <p className="max-w-2xl text-lg leading-8 text-slate-300">
-              Paste a GitHub repository URL. The agent reads the project, analyzes overseas positioning, generates platform-native launch content, clusters issue feedback, and turns insights into growth tasks.
+              Paste a GitHub repository URL. The agent reads the project, analyzes overseas positioning, generates platform-native launch content, clusters issue feedback, and turns insights into GitHub Issues.
             </p>
           </div>
           <form onSubmit={onSubmit} className="self-center rounded-3xl bg-white p-5 text-slate-950 shadow-2xl">
@@ -106,11 +148,12 @@ export default function Home() {
             >
               {loading ? 'Agents are working...' : 'Generate Global Launch Kit'}
             </button>
-            <p className="mt-3 text-xs text-slate-500">Works with public repos. Add GITHUB_TOKEN for higher rate limits.</p>
+            <p className="mt-3 text-xs text-slate-500">Configure GMI_API_KEY and GITHUB_TOKEN on Vercel for the full live workflow.</p>
           </form>
         </header>
 
         {error && <div className="mb-8 rounded-2xl border border-red-200 bg-red-50 p-4 text-red-700">{error}</div>}
+        {issueError && <div className="mb-8 rounded-2xl border border-red-200 bg-red-50 p-4 text-red-700">{issueError}</div>}
 
         {!kit && !loading && (
           <div className="grid gap-4 md:grid-cols-3">
@@ -120,8 +163,8 @@ export default function Home() {
             <Card title="2. Generate launch assets">
               <p className="text-slate-600">Creates Product Hunt, Hacker News, Reddit, X, and LinkedIn launch drafts.</p>
             </Card>
-            <Card title="3. Convert feedback to tasks">
-              <p className="text-slate-600">Clusters GitHub issue feedback and creates prioritized growth tasks.</p>
+            <Card title="3. Convert feedback to issues">
+              <p className="text-slate-600">Clusters feedback into growth tasks and writes selected tasks back to GitHub Issues.</p>
             </Card>
           </div>
         )}
@@ -232,16 +275,34 @@ export default function Home() {
               </Card>
 
               <Card title="Growth Task Board">
+                <p className="mb-4 text-sm text-slate-500">Select a task to write it back to the target repository as a GitHub Issue.</p>
                 <div className="space-y-3">
-                  {kit.growthTasks.map((task) => (
-                    <div key={task.title} className="rounded-2xl border border-slate-100 p-4">
-                      <div className="mb-2 flex items-start justify-between gap-3">
-                        <h3 className="font-semibold text-slate-900">{task.title}</h3>
-                        <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700">{task.priority}</span>
+                  {kit.growthTasks.map((task) => {
+                    const created = createdIssues[task.title];
+                    const isCreating = creatingIssueTitle === task.title;
+                    return (
+                      <div key={task.title} className="rounded-2xl border border-slate-100 p-4">
+                        <div className="mb-2 flex items-start justify-between gap-3">
+                          <h3 className="font-semibold text-slate-900">{task.title}</h3>
+                          <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700">{task.priority}</span>
+                        </div>
+                        <p className="mb-4 text-sm text-slate-600">{task.reason}</p>
+                        {created ? (
+                          <a href={created.url} target="_blank" className="inline-flex rounded-xl bg-green-100 px-3 py-2 text-sm font-semibold text-green-700 hover:bg-green-200">
+                            Open GitHub Issue #{created.number}
+                          </a>
+                        ) : (
+                          <button
+                            onClick={() => createGitHubIssue(task)}
+                            disabled={Boolean(creatingIssueTitle)}
+                            className="rounded-xl bg-slate-950 px-3 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            {isCreating ? 'Creating issue...' : 'Create GitHub Issue'}
+                          </button>
+                        )}
                       </div>
-                      <p className="text-sm text-slate-600">{task.reason}</p>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </Card>
             </div>
