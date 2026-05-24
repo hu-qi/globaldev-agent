@@ -40,7 +40,7 @@ Growth PM Agent 生成优先级增长任务
 - API 类型：OpenAI-compatible Chat Completions
 - 默认接口地址：`https://api.gmi-serving.com/v1/chat/completions`
 - API Key 环境变量：`GMI_API_KEY`
-- 默认模型环境变量：`GMI_MODEL=deepseek-ai/DeepSeek-R1`
+- 默认模型环境变量：`GMI_MODEL=deepseek-ai/DeepSeek-V4-Pro`
 - 安全策略：API Key 仅在服务端读取，不会暴露到浏览器端代码中
 
 ### API 调用场景
@@ -65,7 +65,7 @@ GMI Cloud 调用参数设计如下：
     { "role": "user", "content": "Repository snapshot and JSON schema request" }
   ],
   "temperature": 0.4,
-  "max_tokens": 4000,
+  "max_tokens": 128000,
   "response_format": { "type": "json_object" },
   "context_length_exceeded_behavior": "truncate"
 }
@@ -135,9 +135,9 @@ GITHUB_TOKEN=
 # 参赛必需：GMI Cloud Inference Engine
 GMI_BASE_URL=https://api.gmi-serving.com/v1
 GMI_API_KEY=
-GMI_MODEL=deepseek-ai/DeepSeek-R1
+GMI_MODEL=deepseek-ai/DeepSeek-V4-Pro
 GMI_TEMPERATURE=0.4
-GMI_MAX_TOKENS=4000
+GMI_MAX_TOKENS=128000
 ```
 
 注意：不要把真实 `GMI_API_KEY` 提交到 GitHub。建议在本地 `.env.local`、Vercel Environment Variables 和 GitHub Actions Secrets 中分别配置。
@@ -167,9 +167,9 @@ pnpm install --no-frozen-lockfile
 ```text
 GMI_BASE_URL=https://api.gmi-serving.com/v1
 GMI_API_KEY=你的新 GMI Cloud API Key
-GMI_MODEL=deepseek-ai/DeepSeek-R1
+GMI_MODEL=deepseek-ai/DeepSeek-V4-Pro
 GMI_TEMPERATURE=0.4
-GMI_MAX_TOKENS=4000
+GMI_MAX_TOKENS=128000
 ```
 
 可选添加：
