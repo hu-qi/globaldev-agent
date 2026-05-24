@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-and-smoke-test:
+    name: Build and GMI smoke test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    env:
+      GMI_BASE_URL: ${{ secrets.GMI_BASE_URL || 'https://api.gmi-serving.com/v1' }}
+      GMI_API_KEY: ${{ secrets.GMI_API_KEY }}
+      GMI_MODEL: ${{ secrets.GMI_MODEL || 'deepseek-ai/DeepSeek-R1' }}
+      GMI_TEMPERATURE: '0.2'
+      GMI_MAX_TOKENS: '512'
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Build app
+        run: pnpm build
+
+      - name: Verify GMI Cloud Inference Engine API
+        run: pnpm ci:gmi-smoke
