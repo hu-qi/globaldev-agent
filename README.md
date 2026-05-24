@@ -4,6 +4,61 @@
 
 GlobalDev Agent is an AI DevRel and growth agent for open-source projects, developer tools, and indie products going global. Paste a GitHub repository URL, and it generates a complete **Global Launch Kit**: product positioning, overseas developer personas, Product Hunt/Hacker News/Reddit/X launch content, issue insights, and prioritized growth tasks.
 
+## Competition requirement: GMI Cloud Inference Engine
+
+This project explicitly calls **GMI Cloud Inference Engine** for all LLM reasoning and generation steps.
+
+- Provider: GMI Cloud Inference Engine
+- API style: OpenAI-compatible Chat Completions
+- Endpoint: `https://api.gmi-serving.com/v1/chat/completions`
+- API key variable: `GMI_API_KEY`
+- Default model variable: `GMI_MODEL=deepseek-ai/DeepSeek-R1`
+- Server-side only: the API key is read from `.env.local` and is never exposed to browser code
+
+### API calling scenes
+
+| Scene | Agent node | Input | Output |
+|---|---|---|---|
+| Product analysis | Product Analyst Agent | GitHub README, repo metadata, topics, language, stars | Product category, core value, target users, differentiators |
+| Market positioning | Market Positioning Agent | Product analysis result | One-liner, narrative, overseas personas |
+| Launch content | Content Agent | Positioning and repo context | Product Hunt, Hacker News, Reddit, X, LinkedIn drafts |
+| Feedback intelligence | Feedback Agent | Recent GitHub Issues | Themes, concerns, adoption blockers |
+| Growth execution | Growth PM Agent | All previous outputs | Prioritized growth task board |
+
+### Parameter design
+
+The app calls GMI Cloud with these parameters:
+
+```json
+{
+  "model": "process.env.GMI_MODEL",
+  "messages": [
+    { "role": "system", "content": "GlobalDev Agent role and output rules" },
+    { "role": "user", "content": "Repository snapshot and JSON schema request" }
+  ],
+  "temperature": 0.4,
+  "max_tokens": 4000,
+  "response_format": { "type": "json_object" },
+  "context_length_exceeded_behavior": "truncate"
+}
+```
+
+### Chain logic
+
+```text
+GitHub repository URL
+        ↓
+GitHub REST API fetches README, metadata, and recent issues
+        ↓
+Server-side API route /api/analyze builds a compact repository snapshot
+        ↓
+GMI Cloud Inference Engine generates structured Global Launch Kit JSON
+        ↓
+The app validates/parses the JSON and fills safe fallback fields when needed
+        ↓
+Frontend renders Agent Timeline, positioning, launch content, issue insights, and growth tasks
+```
+
 ## Why this project
 
 Many great developer products fail to reach global users because teams do not have a dedicated DevRel, growth, and community team. GlobalDev Agent turns a GitHub repository into an actionable launch plan.
@@ -31,9 +86,9 @@ Growth PM Agent generates execution tasks
 - Analyze a GitHub repository from `owner/repo` or full GitHub URL.
 - Fetch README and repository metadata through the public GitHub REST API.
 - Optionally fetch recent GitHub Issues when `GITHUB_TOKEN` is configured.
-- Generate a Global Launch Kit with an LLM-compatible client.
-- Supports GMI Cloud / OpenAI-style chat completion endpoints through environment variables.
-- Includes deterministic mock output when no LLM key is configured, so the demo still works.
+- Generate a Global Launch Kit through GMI Cloud Inference Engine.
+- Uses GMI Cloud environment variables by default.
+- Includes deterministic mock output when `GMI_API_KEY` is not configured, so local demos still work.
 
 ## Tech stack
 
@@ -41,7 +96,7 @@ Growth PM Agent generates execution tasks
 - TypeScript
 - Tailwind CSS
 - GitHub REST API
-- OpenAI-compatible LLM API client for GMI Cloud or other providers
+- GMI Cloud Inference Engine
 
 ## Quick start
 
@@ -62,15 +117,17 @@ cp .env.example .env.local
 
 ```env
 # Optional, but recommended for fetching issues from private/high-rate GitHub usage
-GITHUB_TOKEN=ghp_xxx
+GITHUB_TOKEN=
 
-# OpenAI-compatible API endpoint. For GMI Cloud, replace with the endpoint provided by the competition docs.
-LLM_BASE_URL=https://api.openai.com/v1
-LLM_API_KEY=sk-xxx
-LLM_MODEL=gpt-4o-mini
+# Required for competition submission: GMI Cloud Inference Engine
+GMI_BASE_URL=https://api.gmi-serving.com/v1
+GMI_API_KEY=
+GMI_MODEL=deepseek-ai/DeepSeek-R1
+GMI_TEMPERATURE=0.4
+GMI_MAX_TOKENS=4000
 ```
 
-When `LLM_API_KEY` is not set, the app returns a high-quality mocked Global Launch Kit for demo purposes.
+When `GMI_API_KEY` is not set, the app returns a high-quality mocked Global Launch Kit for demo purposes. For the official competition demo and submitted deployment, configure `GMI_API_KEY` so all agent reasoning uses GMI Cloud Inference Engine.
 
 ## Demo script
 
@@ -78,11 +135,11 @@ When `LLM_API_KEY` is not set, the app returns a high-quality mocked Global Laun
 2. Click **Generate Global Launch Kit**.
 3. Show the Agent timeline: Repo Analyzer → Product Analyst → Market Agent → Content Agent → Feedback Agent → Growth PM.
 4. Present the generated launch kit and growth tasks.
-5. Explain how the next version can write tasks back to GitHub Issues.
+5. Explain that the reasoning/generation step is served by GMI Cloud Inference Engine through `/api/analyze`.
 
 ## Competition pitch
 
-> GlobalDev Agent turns a GitHub repository into a global launch plan. It helps Chinese developer tools and open-source projects understand their overseas positioning, generate platform-native launch content, analyze real GitHub feedback, and convert growth insights into product tasks.
+> GlobalDev Agent turns a GitHub repository into a global launch plan. It helps Chinese developer tools and open-source projects understand their overseas positioning, generate platform-native launch content, analyze real GitHub feedback, and convert growth insights into product tasks. All reasoning and content generation are powered by GMI Cloud Inference Engine.
 
 ## Roadmap
 
