@@ -2,7 +2,38 @@
 
 **From README to Global Launch.**
 
+[中文说明 / README-zh](./README-zh.md)
+
 GlobalDev Agent is an AI DevRel and growth agent for open-source projects, developer tools, and indie products going global. Paste a GitHub repository URL, and it generates a complete **Global Launch Kit**: product positioning, overseas developer personas, Product Hunt/Hacker News/Reddit/X launch content, issue insights, and prioritized growth tasks.
+
+## Deploy to Vercel
+
+Yes, this project can be deployed to Vercel as a standard Next.js app.
+
+Recommended Vercel settings:
+
+- Framework Preset: Next.js
+- Install Command: `pnpm install --no-frozen-lockfile`
+- Build Command: `pnpm build`
+- Output Directory: Next.js default
+
+Required Vercel environment variables:
+
+```text
+GMI_BASE_URL=https://api.gmi-serving.com/v1
+GMI_API_KEY=your_new_gmi_cloud_api_key
+GMI_MODEL=deepseek-ai/DeepSeek-R1
+GMI_TEMPERATURE=0.4
+GMI_MAX_TOKENS=4000
+```
+
+Optional environment variable:
+
+```text
+GITHUB_TOKEN=your_github_token
+```
+
+Never commit a real `GMI_API_KEY` to the repository. Configure it only in Vercel Environment Variables, local `.env.local`, or GitHub Actions Secrets.
 
 ## Competition requirement: GMI Cloud Inference Engine
 
