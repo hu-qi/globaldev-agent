@@ -59,6 +59,32 @@ The app validates/parses the JSON and fills safe fallback fields when needed
 Frontend renders Agent Timeline, positioning, launch content, issue insights, and growth tasks
 ```
 
+## CI verification
+
+GitHub Actions runs a CI workflow on push, pull request, and manual dispatch.
+
+The workflow performs:
+
+1. Install dependencies with pnpm.
+2. Run TypeScript typecheck.
+3. Build the Next.js app.
+4. Run a live GMI Cloud Inference Engine smoke test through `pnpm ci:gmi-smoke`.
+
+Required repository secret:
+
+```text
+GMI_API_KEY
+```
+
+Optional repository secrets:
+
+```text
+GMI_BASE_URL
+GMI_MODEL
+```
+
+The smoke test calls the same Chat Completions endpoint with a compact JSON response request. It verifies that the API key, endpoint, model name, JSON response format, and response parsing are all working. If `GMI_API_KEY` is missing, the smoke test exits successfully with a skip message so forked PRs do not fail because secrets are unavailable.
+
 ## Why this project
 
 Many great developer products fail to reach global users because teams do not have a dedicated DevRel, growth, and community team. GlobalDev Agent turns a GitHub repository into an actionable launch plan.
