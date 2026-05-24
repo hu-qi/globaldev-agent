@@ -14,9 +14,9 @@ export type GmiCallTrace = {
 };
 
 const gmiBaseUrl = process.env.GMI_BASE_URL || 'https://api.gmi-serving.com/v1';
-const gmiModel = process.env.GMI_MODEL || 'deepseek-ai/DeepSeek-R1';
+const gmiModel = process.env.GMI_MODEL || 'deepseek-ai/DeepSeek-V4-Pro';
 const gmiTemperature = Number(process.env.GMI_TEMPERATURE || 0.4);
-const gmiMaxTokens = Number(process.env.GMI_MAX_TOKENS || 4000);
+const gmiMaxTokens = Number(process.env.GMI_MAX_TOKENS || 128000);
 
 export const gmiCallTrace: GmiCallTrace = {
   provider: 'GMI Cloud Inference Engine',
