@@ -439,6 +439,17 @@ export default function Home() {
                 <a href={kit.repo.url} target="_blank" className="text-xl font-bold text-blue-700 underline-offset-4 hover:underline">
                   {kit.repo.name}
                 </a>
+                {kit.result && (
+                  <p className="mt-2">
+                    <a
+                      href={kit.result.url}
+                      target="_blank"
+                      className="text-sm font-semibold text-slate-950 underline underline-offset-4"
+                    >
+                      Open published result
+                    </a>
+                  </p>
+                )}
                 <p className="mt-2 text-slate-600">{kit.repo.description}</p>
                 <div className="mt-4 flex flex-wrap gap-2">
                   <Pill>{kit.repo.language || 'Unknown language'}</Pill>
