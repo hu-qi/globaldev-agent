@@ -137,13 +137,28 @@ export default async function ResultPage({ params }: { params: { id: string } })
       </section>
 
       <section className="mt-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="flex flex-wrap items-baseline justify-between gap-4">
-          <h2 className="text-lg font-semibold text-slate-950">Share</h2>
-          <a href={canonical} className="text-sm font-semibold text-slate-950 underline underline-offset-4">
-            {canonical}
-          </a>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h2 className="text-lg font-semibold text-slate-950">Share</h2>
+            <p className="mt-2 text-sm text-slate-700">
+              Share this UGC result page, or fork the repo link above to post directly on platforms.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <ResultHeaderActions />
+            <a
+              href={canonical}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="rounded-full bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-200"
+            >
+              Open
+            </a>
+          </div>
         </div>
-        <p className="mt-2 text-sm text-slate-700">Share this UGC result page, or fork the repo link above to post directly on platforms.</p>
+        <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+          <p className="break-all font-mono text-xs text-slate-700">{canonical}</p>
+        </div>
       </section>
 
       {latest.length > 0 && (
