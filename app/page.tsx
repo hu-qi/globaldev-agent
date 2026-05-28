@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 
 type GrowthTask = {
   title: string;
@@ -281,12 +281,47 @@ export default function Home() {
   const [launchChannel, setLaunchChannel] = useState<'productHunt' | 'hackerNews' | 'reddit' | 'xThread' | 'linkedin'>('productHunt');
   const [communityChannel, setCommunityChannel] = useState<'hackerNews' | 'reddit'>('hackerNews');
   const [copyState, setCopyState] = useState<{ key: string; status: 'copied' | 'error' } | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
+  const [loadingStartedAt, setLoadingStartedAt] = useState<number | null>(null);
+  const [elapsedMs, setElapsedMs] = useState(0);
+
+  const agentSteps = useMemo(
+    () => ['Repo Analyzer', 'Product Analyst', 'Market Agent', 'Content Agent', 'Feedback Agent', 'Growth PM'] as const,
+    []
+  );
+
+  const currentStep = useMemo(() => {
+    if (!loadingStartedAt) return null;
+    const stepMs = 6000;
+    const idx = Math.min(agentSteps.length - 1, Math.floor(elapsedMs / stepMs));
+    const within = (elapsedMs % stepMs) / stepMs;
+    const progress = Math.min(0.98, (idx + within) / agentSteps.length);
+    return { idx, progress };
+  }, [agentSteps.length, elapsedMs, loadingStartedAt]);
 
   useEffect(() => {
     if (!copyState) return;
     const timer = window.setTimeout(() => setCopyState(null), 1500);
     return () => window.clearTimeout(timer);
   }, [copyState]);
+
+  useEffect(() => {
+    if (!loading || !loadingStartedAt) return;
+    setElapsedMs(Date.now() - loadingStartedAt);
+    const timer = window.setInterval(() => setElapsedMs(Date.now() - loadingStartedAt), 250);
+    return () => window.clearInterval(timer);
+  }, [loading, loadingStartedAt]);
+
+  function formatElapsed(ms: number) {
+    const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+  }
+
+  function cancelRun() {
+    abortRef.current?.abort();
+  }
 
   const activeLaunchText = useMemo(() => {
     if (!kit) return '';
@@ -332,25 +367,35 @@ export default function Home() {
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    abortRef.current?.abort();
+    abortRef.current = new AbortController();
     setLoading(true);
     setError(null);
     setIssueError(null);
     setCreatedIssues({});
     setKit(null);
+    setLoadingStartedAt(Date.now());
+    setElapsedMs(0);
 
     try {
       const response = await fetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ repoUrl })
+        body: JSON.stringify({ repoUrl }),
+        signal: abortRef.current.signal
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Failed to analyze repository.');
       setKit(data);
     } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        setError('Cancelled.');
+        return;
+      }
       setError(err instanceof Error ? err.message : 'Failed to analyze repository.');
     } finally {
       setLoading(false);
+      abortRef.current = null;
     }
   }
 
@@ -428,7 +473,39 @@ export default function Home() {
         {loading && (
           <div className="rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-sm">
             <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-4 border-slate-200 border-t-blue-600" />
-            <p className="font-medium text-slate-800">Running Repo Analyzer, Product Analyst, Market Agent, Content Agent, Feedback Agent, and Growth PM...</p>
+            <div className="mx-auto max-w-xl">
+              <div className="flex flex-wrap items-center justify-center gap-2 text-sm text-slate-600">
+                <span className="rounded-full bg-slate-100 px-3 py-1 font-semibold text-slate-800">
+                  Elapsed {formatElapsed(elapsedMs)}
+                </span>
+                <span className="text-slate-500">Typical: 15–60s (depends on repo size and GitHub rate limits)</span>
+              </div>
+
+              <div className="mt-5">
+                <div className="flex items-center justify-between text-sm font-semibold text-slate-800">
+                  <span>
+                    {currentStep ? `Step ${currentStep.idx + 1}/${agentSteps.length}: ${agentSteps[currentStep.idx]}` : 'Starting...'}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={cancelRun}
+                    className="rounded-full bg-slate-100 px-3 py-1 text-sm font-semibold text-slate-800 hover:bg-slate-200"
+                  >
+                    Cancel
+                  </button>
+                </div>
+                <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-slate-100">
+                  <div
+                    className="h-full rounded-full bg-blue-600 transition-[width]"
+                    style={{ width: `${Math.floor((currentStep?.progress ?? 0.02) * 100)}%` }}
+                  />
+                </div>
+              </div>
+
+              <p className="mt-5 text-sm text-slate-700">
+                Running {agentSteps.join(', ')}...
+              </p>
+            </div>
           </div>
         )}
 
