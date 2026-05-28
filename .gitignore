@@ -32,6 +32,8 @@ pnpm-debug.log*
 Thumbs.db
 .vscode/
 .idea/
+.trae/
+openspec/
 
 # TypeScript
 *.tsbuildinfo
