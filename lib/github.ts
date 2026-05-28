@@ -86,7 +86,7 @@ export async function fetchRepoSnapshot(input: string): Promise<RepoSnapshot> {
       .filter((issue) => !issue.pull_request)
       .map((issue) => ({
         title: issue.title,
-        body: issue.body,
+        body: issue.body ?? null,
         labels: issue.labels.map((label) => (typeof label === 'string' ? label : label.name || '')).filter(Boolean),
         comments: issue.comments,
         url: issue.html_url
