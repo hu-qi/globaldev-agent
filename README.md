@@ -205,6 +205,5 @@ When `GMI_API_KEY` is not set, the app returns a high-quality mocked Global Laun
 - [x] Add Reddit/Hacker News community rule checker.
 - [x] Publishable result pages at `/result/<id>` (SSR + metadata + sitemap for SEO-ready UGC).
 - [ ] Bulk-create issues from the entire task board.
-- [ ] Configure issue labels / assignees / templates.
-- [ ] Add GitCode repository support.
-- [ ] Add feedback ingestion from Product Hunt, Reddit, Hacker News, and X.
+- [ ] Configure issue labels and templates (assignees optional).
+- [ ] Add feedback ingestion (start with manual import, then Product Hunt / Reddit / Hacker News / X).
