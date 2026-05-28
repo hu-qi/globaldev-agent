@@ -60,6 +60,7 @@ type LaunchKit = {
     sourceIssueCount: number;
   };
   growthTasks: GrowthTask[];
+  result?: { id: string; url: string };
 };
 
 const sampleRepo = 'https://github.com/hu-qi/globaldev-agent';

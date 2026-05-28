@@ -55,6 +55,7 @@ export type LaunchKit = {
     priority: 'High' | 'Medium' | 'Low';
     reason: string;
   }>;
+  result?: { id: string; url: string };
 };
 
 function compactRepo(snapshot: RepoSnapshot) {
