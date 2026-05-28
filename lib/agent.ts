@@ -33,6 +33,18 @@ export type LaunchKit = {
     xThread: string[];
     linkedin: string;
   };
+  productHuntAssets: {
+    tagline: string;
+    shortDescription: string;
+    firstComment: string;
+    keyFeatures: string[];
+    faq: Array<{ question: string; answer: string }>;
+    galleryCaptions: string[];
+  };
+  communityChecks: {
+    hackerNews: { risks: string[]; rewrite: string; checklist: string[] };
+    reddit: { risks: string[]; rewrite: string; checklist: string[] };
+  };
   issueInsights: {
     themes: string[];
     concerns: string[];
@@ -63,6 +75,7 @@ function fallbackLaunchKit(snapshot: RepoSnapshot): LaunchKit {
   const productName = snapshot.name;
   const language = snapshot.language || 'developer';
   const hasIssues = snapshot.issues.length > 0;
+  const productHuntTagline = `${productName} — ${snapshot.description || 'from README to global launch'}`.slice(0, 60);
 
   return {
     repo: {
@@ -112,6 +125,33 @@ function fallbackLaunchKit(snapshot: RepoSnapshot): LaunchKit {
       ],
       linkedin: `${productName} is preparing for a global developer launch. The goal is to make the project easier to understand, evaluate, and adopt for overseas developers through clearer positioning, better documentation, and community-native launch content.`
     },
+    productHuntAssets: {
+      tagline: productHuntTagline,
+      shortDescription: snapshot.description || `${productName} helps developers ship faster with clearer workflows.`,
+      firstComment: `Hi Product Hunt! I built/maintain ${productName} to solve a recurring workflow problem for developers.\n\nI would love feedback on:\n- whether the value is clear from the README\n- what use cases you would like to see documented\n- what would block adoption in your team\n\nRepo: ${snapshot.htmlUrl}`,
+      keyFeatures: [
+        'Fast evaluation from a real GitHub repository snapshot',
+        'Platform-native launch drafts across developer communities',
+        'Issue insights turned into actionable growth tasks'
+      ],
+      faq: [
+        { question: 'Who is this for?', answer: 'Open-source maintainers, developer tool builders, and indie teams preparing to launch globally.' },
+        { question: 'What do I need to run it?', answer: 'A public GitHub repository URL. Configure GMI_API_KEY for live reasoning; otherwise a demo-quality mock kit is generated.' }
+      ],
+      galleryCaptions: ['Paste a GitHub repo URL', 'Agent timeline and positioning', 'Launch content and community-ready drafts', 'Issue insights and growth task board']
+    },
+    communityChecks: {
+      hackerNews: {
+        risks: ['Too marketing-heavy wording', 'Missing concrete technical details', 'Unclear what feedback you want'],
+        rewrite: `Show HN: ${productName} — ${snapshot.description || 'a developer tool from GitHub'}\n\nI maintain ${productName} and I am preparing it for a broader developer audience.\n\nWhat I am looking for feedback on:\n- Is the README enough to understand the value in 60 seconds?\n- What examples would make evaluation easier?\n- What would block adoption for your team?\n\nRepo: ${snapshot.htmlUrl}`,
+        checklist: ['Include concrete problem + why you built it', 'Keep tone technical and specific', 'Ask for one or two clear feedback questions', 'Add a direct link to the repo and a minimal demo/quickstart if available']
+      },
+      reddit: {
+        risks: ['Looks like self-promotion without context', 'Not tailored to a specific subreddit', 'Does not state what kind of feedback is wanted'],
+        rewrite: `I am preparing ${productName} for a global dev audience and would love feedback on the project positioning and onboarding.\n\nWhat I am trying to improve:\n- clearer quickstart\n- more real-world examples\n- less friction for first-time users\n\nRepo: ${snapshot.htmlUrl}\n\nIf you have launched a dev tool before, what would you change first for overseas adoption?`,
+        checklist: ['Pick the right subreddit and follow its posting rules', 'Lead with the problem and what you tried', 'Be explicit about the type of feedback you want', 'Avoid salesy language; keep it practical', 'Engage in replies with details and updates']
+      }
+    },
     issueInsights: {
       themes: hasIssues ? ['Documentation clarity', 'Feature requests', 'Integration questions', 'Bug reports'] : ['README clarity', 'Use case explanation', 'Onboarding examples'],
       concerns: hasIssues ? snapshot.issues.slice(0, 4).map((issue) => issue.title) : ['Need clearer quickstart', 'Need comparison with alternatives', 'Need concrete usage examples'],
@@ -142,6 +182,8 @@ export async function runGlobalDevAgent(repoUrl: string): Promise<LaunchKit> {
   "product": {"category": string, "coreValue": string, "targetUsers": string[], "differentiators": string[]},
   "positioning": {"oneLiner": string, "narrative": string, "personas": [{"name": string, "need": string}]},
   "launchContent": {"productHunt": string, "hackerNews": string, "reddit": string, "xThread": string[], "linkedin": string},
+  "productHuntAssets": {"tagline": string, "shortDescription": string, "firstComment": string, "keyFeatures": string[], "faq": [{"question": string, "answer": string}], "galleryCaptions": string[]},
+  "communityChecks": {"hackerNews": {"risks": string[], "rewrite": string, "checklist": string[]}, "reddit": {"risks": string[], "rewrite": string, "checklist": string[]}},
   "issueInsights": {"themes": string[], "concerns": string[], "sourceIssueCount": number},
   "growthTasks": [{"title": string, "priority": "High" | "Medium" | "Low", "reason": string}]
 }\n\nRepository snapshot:\n${JSON.stringify(compactRepo(snapshot), null, 2)}`
@@ -155,6 +197,8 @@ export async function runGlobalDevAgent(repoUrl: string): Promise<LaunchKit> {
     product: generated.product || fallback.product,
     positioning: generated.positioning || fallback.positioning,
     launchContent: generated.launchContent || fallback.launchContent,
+    productHuntAssets: generated.productHuntAssets || fallback.productHuntAssets,
+    communityChecks: generated.communityChecks || fallback.communityChecks,
     issueInsights: generated.issueInsights || fallback.issueInsights,
     growthTasks: generated.growthTasks || fallback.growthTasks
   };
