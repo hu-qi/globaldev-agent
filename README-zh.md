@@ -257,4 +257,4 @@ GMI smoke test 会验证：
 - [x] 结果页发布与 SEO：支持 `/result/<id>`（SSR + 元信息 + sitemap，作为 UGC 内容页）。
 - [ ] 将任务看板批量创建为 GitHub Issues。
 - [ ] 支持可配置 Issue labels 与模板（assignees 可选）。
-- [ ] 接入真实反馈：先支持手动导入，再做 Product Hunt / Reddit / Hacker News / X 抓取。
+- [ ] 接入真实反馈：通过 Agent 定时拉取（先支持手动导入，再做 Product Hunt / Reddit / Hacker News / X 抓取）。

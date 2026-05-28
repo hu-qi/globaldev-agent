@@ -206,4 +206,4 @@ When `GMI_API_KEY` is not set, the app returns a high-quality mocked Global Laun
 - [x] Publishable result pages at `/result/<id>` (SSR + metadata + sitemap for SEO-ready UGC).
 - [ ] Bulk-create issues from the entire task board.
 - [ ] Configure issue labels and templates (assignees optional).
-- [ ] Add feedback ingestion (start with manual import, then Product Hunt / Reddit / Hacker News / X).
+- [ ] Add feedback ingestion via a scheduled agent (start with manual import, then Product Hunt / Reddit / Hacker News / X polling).
