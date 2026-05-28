@@ -1,5 +1,5 @@
 import type { MetadataRoute } from 'next';
-import { isResultStoreConfigured, listPublishedResultIds } from '../lib/resultStore';
+import { buildPrettyResultPath, isResultStoreConfigured, listPublishedResults } from '../lib/resultStore';
 
 function siteUrl() {
   if (process.env.NEXT_PUBLIC_SITE_URL) return process.env.NEXT_PUBLIC_SITE_URL;
@@ -11,10 +11,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   if (!isResultStoreConfigured()) return [];
 
   const base = siteUrl();
-  const ids = await listPublishedResultIds(5000);
+  const results = await listPublishedResults(5000);
 
-  return ids.map((id) => ({
-    url: `${base}/result/${id}`
+  return results.map((result) => ({
+    url: `${base}${buildPrettyResultPath(result.repoUrl, result.id)}`
   }));
 }
-
