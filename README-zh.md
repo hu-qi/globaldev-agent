@@ -254,7 +254,7 @@ GMI smoke test 会验证：
 - [x] 将增长任务创建为 GitHub Issues（单条创建）。
 - [x] 生成 Product Hunt 发布资产包。
 - [x] 增加海外社区规则检查（Hacker News / Reddit）。
-- [ ] 结果页发布与 SEO：支持 `/result/<id>`（SSR + 元信息 + sitemap，作为 UGC 内容页）。
+- [x] 结果页发布与 SEO：支持 `/result/<id>`（SSR + 元信息 + sitemap，作为 UGC 内容页）。
 - [ ] 将任务看板批量创建为 GitHub Issues。
 - [ ] 支持可配置 Issue labels / assignees / 模板。
 - [ ] 支持 GitCode 仓库输入。
