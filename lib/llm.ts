@@ -17,6 +17,7 @@ const gmiBaseUrl = process.env.GMI_BASE_URL || 'https://api.gmi-serving.com/v1';
 const gmiModel = process.env.GMI_MODEL || 'deepseek-ai/DeepSeek-V4-Pro';
 const gmiTemperature = Number(process.env.GMI_TEMPERATURE || 0.4);
 const gmiMaxTokens = Number(process.env.GMI_MAX_TOKENS || 128000);
+const gmiContextWindow = Number(process.env.GMI_CONTEXT_WINDOW || 131072);
 
 export const gmiCallTrace: GmiCallTrace = {
   provider: 'GMI Cloud Inference Engine',
@@ -38,6 +39,10 @@ export async function generateText(messages: ChatMessage[]): Promise<string | nu
   const gmiKey = process.env.GMI_API_KEY;
   if (!gmiKey) return null;
 
+  const approximateInputTokens = Math.ceil(messages.reduce((sum, message) => sum + message.content.length, 0) / 4) + 200;
+  const completionBudget = gmiContextWindow - approximateInputTokens - 512;
+  const maxTokensForRequest = Math.min(gmiMaxTokens, Math.max(512, completionBudget));
+
   const response = await fetch(`${gmiBaseUrl.replace(/\/$/, '')}/chat/completions`, {
     method: 'POST',
     headers: {
@@ -48,7 +53,7 @@ export async function generateText(messages: ChatMessage[]): Promise<string | nu
       model: gmiModel,
       messages,
       temperature: gmiTemperature,
-      max_tokens: gmiMaxTokens,
+      max_tokens: maxTokensForRequest,
       response_format: { type: 'json_object' },
       context_length_exceeded_behavior: 'truncate'
     })
