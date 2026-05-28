@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
 
 type GrowthTask = {
   title: string;
@@ -42,6 +42,18 @@ type LaunchKit = {
     xThread: string[];
     linkedin: string;
   };
+  productHuntAssets: {
+    tagline: string;
+    shortDescription: string;
+    firstComment: string;
+    keyFeatures: string[];
+    faq: Array<{ question: string; answer: string }>;
+    galleryCaptions: string[];
+  };
+  communityChecks: {
+    hackerNews: { risks: string[]; rewrite: string; checklist: string[] };
+    reddit: { risks: string[]; rewrite: string; checklist: string[] };
+  };
   issueInsights: {
     themes: string[];
     concerns: string[];
@@ -52,10 +64,13 @@ type LaunchKit = {
 
 const sampleRepo = 'https://github.com/hu-qi/globaldev-agent';
 
-function Card({ title, children }: { title: string; children: React.ReactNode }) {
+function Card({ title, actions, children }: { title: string; actions?: React.ReactNode; children: React.ReactNode }) {
   return (
     <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-      <h2 className="mb-4 text-lg font-semibold text-slate-950">{title}</h2>
+      <div className="mb-4 flex items-center justify-between gap-4">
+        <h2 className="text-lg font-semibold text-slate-950">{title}</h2>
+        {actions}
+      </div>
       {children}
     </section>
   );
@@ -63,6 +78,194 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
 
 function Pill({ children }: { children: React.ReactNode }) {
   return <span className="rounded-full bg-slate-100 px-3 py-1 text-sm text-slate-700">{children}</span>;
+}
+
+function TabButton({
+  active,
+  onClick,
+  children
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={[
+        'rounded-full px-3 py-1.5 text-sm font-semibold transition',
+        active ? 'bg-slate-950 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+      ].join(' ')}
+    >
+      {children}
+    </button>
+  );
+}
+
+function IconButton({
+  label,
+  onClick,
+  children,
+  disabled,
+  tone
+}: {
+  label: string;
+  onClick: () => void;
+  children: React.ReactNode;
+  disabled?: boolean;
+  tone?: 'neutral' | 'success' | 'danger';
+}) {
+  const toneClass =
+    tone === 'success'
+      ? 'border-green-200 bg-green-50 text-green-700 hover:bg-green-100'
+      : tone === 'danger'
+        ? 'border-red-200 bg-red-50 text-red-700 hover:bg-red-100'
+        : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50';
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      onClick={onClick}
+      disabled={disabled}
+      className={['inline-flex h-9 w-9 items-center justify-center rounded-full border shadow-sm transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-60', toneClass].join(' ')}
+    >
+      {children}
+    </button>
+  );
+}
+
+function PlatformIcon({ platform }: { platform: 'productHunt' | 'hackerNews' | 'reddit' | 'x' | 'linkedin' }) {
+  if (platform === 'x') {
+    return (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path d="M18.901 1.153h3.68l-8.04 9.19 9.46 12.504h-7.41l-5.81-7.59-6.64 7.59H.46l8.6-9.84L0 1.153h7.6l5.25 6.95 6.05-6.95Zm-1.29 19.49h2.04L6.49 3.24H4.3l13.31 17.4Z" />
+      </svg>
+    );
+  }
+
+  if (platform === 'productHunt') {
+    return (
+      <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="12" cy="12" r="12" fill="#FF6154" />
+        <path
+          d="M8 6h5.1c3 0 4.9 1.9 4.9 4.6 0 2.8-1.9 4.6-4.9 4.6H11v3.2H8V6Zm3 2.6v4.6h1.9c1.4 0 2.2-.9 2.2-2.3 0-1.4-.8-2.3-2.2-2.3H11Z"
+          fill="white"
+        />
+      </svg>
+    );
+  }
+
+  if (platform === 'hackerNews') {
+    return (
+      <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+        <rect x="2" y="2" width="20" height="20" rx="4" fill="#FF6600" />
+        <path
+          d="M8.6 7.2h2.2l1.2 2.6c.2.4.4 1 .6 1.4.2-.4.4-1 .6-1.4l1.2-2.6h2.2l-3 5.8V17h-2v-4l-3-5.8Z"
+          fill="white"
+        />
+      </svg>
+    );
+  }
+
+  if (platform === 'linkedin') {
+    return (
+      <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+        <rect x="2" y="2" width="20" height="20" rx="4" fill="#0A66C2" />
+        <path
+          d="M7.2 10.1H9.6V17H7.2v-6.9Zm1.2-3.1a1.4 1.4 0 1 1 0 2.8 1.4 1.4 0 0 1 0-2.8ZM11.1 10.1h2.3v.9h.1c.3-.6 1.1-1.1 2.3-1.1 2.5 0 3 1.6 3 3.7V17h-2.4v-3.1c0-.7 0-1.7-1.1-1.7s-1.2.8-1.2 1.7V17h-2.4v-6.9Z"
+          fill="white"
+        />
+      </svg>
+    );
+  }
+
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+      <circle cx="12" cy="12" r="12" fill="#FF4500" />
+      <path
+        d="M17.8 12.4c.1.4.2.9.2 1.4 0 2.9-2.7 5.2-6 5.2s-6-2.3-6-5.2c0-.5.1-1 .2-1.4.8.6 2 .9 3.4 1 .6.1 1 .6 1 1.2v.2c.1.8.7 1.4 1.4 1.4s1.3-.6 1.4-1.4v-.2c0-.6.4-1.1 1-1.2 1.4-.1 2.6-.4 3.4-1Z"
+        fill="white"
+        opacity="0.9"
+      />
+      <circle cx="9.5" cy="12.3" r="1" fill="white" />
+      <circle cx="14.5" cy="12.3" r="1" fill="white" />
+      <path d="M10.2 14.9c.5.5 1.1.8 1.8.8s1.3-.3 1.8-.8" stroke="white" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function ExternalLinkIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M14 5h5v5m0-5-9 9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path
+        d="M19 14v5a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h5"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+async function writeClipboard(text: string): Promise<void> {
+  if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+
+  const textarea = document.createElement('textarea');
+  textarea.value = text;
+  textarea.style.position = 'fixed';
+  textarea.style.top = '0';
+  textarea.style.left = '0';
+  textarea.style.width = '1px';
+  textarea.style.height = '1px';
+  textarea.style.opacity = '0';
+  document.body.appendChild(textarea);
+  textarea.focus();
+  textarea.select();
+  const ok = document.execCommand('copy');
+  document.body.removeChild(textarea);
+  if (!ok) throw new Error('Copy failed');
+}
+
+function truncateForUrl(value: string, maxLength: number) {
+  if (value.length <= maxLength) return value;
+  return value.slice(0, Math.max(0, maxLength - 1)) + '…';
+}
+
+function buildIntentUrl(input: {
+  platform: 'x' | 'reddit' | 'linkedin' | 'hackerNews' | 'productHunt';
+  repoUrl: string;
+  title?: string;
+  text?: string;
+}) {
+  const encodedUrl = encodeURIComponent(input.repoUrl);
+
+  if (input.platform === 'x') {
+    const text = truncateForUrl(input.text || '', 260);
+    return `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
+  }
+
+  if (input.platform === 'reddit') {
+    const title = truncateForUrl(input.title || '', 290);
+    const text = truncateForUrl(input.text || '', 1800);
+    return `https://www.reddit.com/submit?title=${encodeURIComponent(title)}&text=${encodeURIComponent(text)}`;
+  }
+
+  if (input.platform === 'linkedin') {
+    return `https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}`;
+  }
+
+  if (input.platform === 'hackerNews') {
+    const title = truncateForUrl(input.title || '', 120);
+    return `https://news.ycombinator.com/submitlink?u=${encodedUrl}&t=${encodeURIComponent(title)}`;
+  }
+
+  return 'https://www.producthunt.com/posts/new';
 }
 
 export default function Home() {
@@ -73,6 +276,58 @@ export default function Home() {
   const [creatingIssueTitle, setCreatingIssueTitle] = useState<string | null>(null);
   const [createdIssues, setCreatedIssues] = useState<Record<string, CreatedIssue>>({});
   const [issueError, setIssueError] = useState<string | null>(null);
+  const [rightPanel, setRightPanel] = useState<'launch' | 'ph' | 'rules' | 'tasks'>('launch');
+  const [launchChannel, setLaunchChannel] = useState<'productHunt' | 'hackerNews' | 'reddit' | 'xThread' | 'linkedin'>('productHunt');
+  const [communityChannel, setCommunityChannel] = useState<'hackerNews' | 'reddit'>('hackerNews');
+  const [copyState, setCopyState] = useState<{ key: string; status: 'copied' | 'error' } | null>(null);
+
+  useEffect(() => {
+    if (!copyState) return;
+    const timer = window.setTimeout(() => setCopyState(null), 1500);
+    return () => window.clearTimeout(timer);
+  }, [copyState]);
+
+  const activeLaunchText = useMemo(() => {
+    if (!kit) return '';
+    if (launchChannel === 'productHunt') return kit.launchContent.productHunt;
+    if (launchChannel === 'hackerNews') return kit.launchContent.hackerNews;
+    if (launchChannel === 'reddit') return kit.launchContent.reddit;
+    if (launchChannel === 'linkedin') return kit.launchContent.linkedin;
+    return kit.launchContent.xThread.join('\n');
+  }, [kit, launchChannel]);
+
+  const activeLaunchPlatform = useMemo(() => {
+    if (launchChannel === 'xThread') return 'x' as const;
+    if (launchChannel === 'linkedin') return 'linkedin' as const;
+    return launchChannel as 'productHunt' | 'hackerNews' | 'reddit';
+  }, [launchChannel]);
+
+  async function onCopy(key: string, text: string) {
+    try {
+      await writeClipboard(text);
+      setCopyState({ key, status: 'copied' });
+    } catch {
+      setCopyState({ key, status: 'error' });
+    }
+  }
+
+  function openPublish(url: string) {
+    window.open(url, '_blank', 'noopener,noreferrer');
+  }
+
+  function copyTone(key: string) {
+    if (copyState?.key !== key) return 'neutral' as const;
+    return copyState.status === 'copied' ? ('success' as const) : ('danger' as const);
+  }
+
+  function copyHint(key: string) {
+    if (copyState?.key !== key) return null;
+    return (
+      <span className={['rounded-full px-2 py-1 text-xs font-semibold', copyState.status === 'copied' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'].join(' ')}>
+        {copyState.status === 'copied' ? 'Copied' : 'Copy failed'}
+      </span>
+    );
+  }
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -249,62 +504,295 @@ export default function Home() {
                 </div>
               </Card>
 
-              <Card title="Global Launch Content">
-                <div className="space-y-4">
-                  <div>
-                    <h3 className="font-semibold text-slate-900">Product Hunt</h3>
-                    <p className="mt-1 rounded-2xl bg-slate-50 p-4 text-sm leading-6 text-slate-700">{kit.launchContent.productHunt}</p>
+              <div className="sticky top-6 z-10 rounded-3xl border border-slate-200 bg-white p-3 shadow-sm">
+                <div className="flex flex-wrap gap-2">
+                  <TabButton active={rightPanel === 'launch'} onClick={() => setRightPanel('launch')}>
+                    Launch Content
+                  </TabButton>
+                  <TabButton active={rightPanel === 'ph'} onClick={() => setRightPanel('ph')}>
+                    Product Hunt
+                  </TabButton>
+                  <TabButton active={rightPanel === 'rules'} onClick={() => setRightPanel('rules')}>
+                    Rule Check
+                  </TabButton>
+                  <TabButton active={rightPanel === 'tasks'} onClick={() => setRightPanel('tasks')}>
+                    Tasks
+                  </TabButton>
+                </div>
+              </div>
+
+              {rightPanel === 'launch' && (
+                <Card
+                  title="Global Launch Content"
+                  actions={
+                    <div className="flex items-center gap-2">
+                      {copyHint('launch')}
+                      <IconButton label="Copy" tone={copyTone('launch')} onClick={() => onCopy('launch', activeLaunchText)}>
+                        <PlatformIcon platform={activeLaunchPlatform} />
+                      </IconButton>
+                      <IconButton
+                        label="Publish"
+                        onClick={() => {
+                          const hnTitle = `Show HN: ${kit.repo.name} — ${kit.repo.description || 'a developer tool'}`;
+                          const redditTitle = `${kit.repo.name}: ${kit.positioning.oneLiner}`;
+                          const url = buildIntentUrl({
+                            platform:
+                              activeLaunchPlatform === 'productHunt'
+                                ? 'productHunt'
+                                : activeLaunchPlatform === 'hackerNews'
+                                  ? 'hackerNews'
+                                  : activeLaunchPlatform === 'reddit'
+                                    ? 'reddit'
+                                    : activeLaunchPlatform === 'linkedin'
+                                      ? 'linkedin'
+                                      : 'x',
+                            repoUrl: kit.repo.url,
+                            title: activeLaunchPlatform === 'hackerNews' ? hnTitle : activeLaunchPlatform === 'reddit' ? redditTitle : undefined,
+                            text: activeLaunchPlatform === 'x' || activeLaunchPlatform === 'reddit' ? activeLaunchText : undefined
+                          });
+                          openPublish(url);
+                          void onCopy('launch', activeLaunchText);
+                        }}
+                      >
+                        <ExternalLinkIcon />
+                      </IconButton>
+                    </div>
+                  }
+                >
+                  <div className="mb-4 flex flex-wrap gap-2">
+                    <TabButton active={launchChannel === 'productHunt'} onClick={() => setLaunchChannel('productHunt')}>
+                      Product Hunt
+                    </TabButton>
+                    <TabButton active={launchChannel === 'hackerNews'} onClick={() => setLaunchChannel('hackerNews')}>
+                      Hacker News
+                    </TabButton>
+                    <TabButton active={launchChannel === 'reddit'} onClick={() => setLaunchChannel('reddit')}>
+                      Reddit
+                    </TabButton>
+                    <TabButton active={launchChannel === 'xThread'} onClick={() => setLaunchChannel('xThread')}>
+                      X Thread
+                    </TabButton>
+                    <TabButton active={launchChannel === 'linkedin'} onClick={() => setLaunchChannel('linkedin')}>
+                      LinkedIn
+                    </TabButton>
                   </div>
-                  <div>
-                    <h3 className="font-semibold text-slate-900">Hacker News</h3>
-                    <p className="mt-1 whitespace-pre-line rounded-2xl bg-slate-50 p-4 text-sm leading-6 text-slate-700">{kit.launchContent.hackerNews}</p>
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-slate-900">Reddit</h3>
-                    <p className="mt-1 rounded-2xl bg-slate-50 p-4 text-sm leading-6 text-slate-700">{kit.launchContent.reddit}</p>
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-slate-900">X Thread</h3>
-                    <ol className="mt-1 space-y-2 rounded-2xl bg-slate-50 p-4 text-sm leading-6 text-slate-700">
+
+                  {launchChannel === 'productHunt' && <p className="rounded-2xl bg-slate-50 p-4 text-sm leading-6 text-slate-700">{kit.launchContent.productHunt}</p>}
+                  {launchChannel === 'hackerNews' && (
+                    <p className="whitespace-pre-line rounded-2xl bg-slate-50 p-4 text-sm leading-6 text-slate-700">{kit.launchContent.hackerNews}</p>
+                  )}
+                  {launchChannel === 'reddit' && <p className="rounded-2xl bg-slate-50 p-4 text-sm leading-6 text-slate-700">{kit.launchContent.reddit}</p>}
+                  {launchChannel === 'xThread' && (
+                    <ol className="space-y-2 rounded-2xl bg-slate-50 p-4 text-sm leading-6 text-slate-700">
                       {kit.launchContent.xThread.map((tweet) => (
                         <li key={tweet}>{tweet}</li>
                       ))}
                     </ol>
-                  </div>
-                </div>
-              </Card>
+                  )}
+                  {launchChannel === 'linkedin' && <p className="rounded-2xl bg-slate-50 p-4 text-sm leading-6 text-slate-700">{kit.launchContent.linkedin}</p>}
+                </Card>
+              )}
 
-              <Card title="Growth Task Board">
-                <p className="mb-4 text-sm text-slate-500">Select a task to write it back to the target repository as a GitHub Issue.</p>
-                <div className="space-y-3">
-                  {kit.growthTasks.map((task) => {
-                    const created = createdIssues[task.title];
-                    const isCreating = creatingIssueTitle === task.title;
-                    return (
-                      <div key={task.title} className="rounded-2xl border border-slate-100 p-4">
-                        <div className="mb-2 flex items-start justify-between gap-3">
-                          <h3 className="font-semibold text-slate-900">{task.title}</h3>
-                          <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700">{task.priority}</span>
-                        </div>
-                        <p className="mb-4 text-sm text-slate-600">{task.reason}</p>
-                        {created ? (
-                          <a href={created.url} target="_blank" className="inline-flex rounded-xl bg-green-100 px-3 py-2 text-sm font-semibold text-green-700 hover:bg-green-200">
-                            Open GitHub Issue #{created.number}
-                          </a>
-                        ) : (
-                          <button
-                            onClick={() => createGitHubIssue(task)}
-                            disabled={Boolean(creatingIssueTitle)}
-                            className="rounded-xl bg-slate-950 px-3 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
-                          >
-                            {isCreating ? 'Creating issue...' : 'Create GitHub Issue'}
-                          </button>
-                        )}
+              {rightPanel === 'ph' && (
+                <Card
+                  title="Product Hunt Asset Pack"
+                  actions={
+                    <div className="flex items-center gap-2">
+                      {copyHint('ph')}
+                      <IconButton
+                        label="Copy"
+                        tone={copyTone('ph')}
+                        onClick={() => {
+                          const text = [
+                            `Tagline: ${kit.productHuntAssets.tagline}`,
+                            '',
+                            `Short description: ${kit.productHuntAssets.shortDescription}`,
+                            '',
+                            'First comment:',
+                            kit.productHuntAssets.firstComment,
+                            '',
+                            'Key features:',
+                            ...kit.productHuntAssets.keyFeatures.map((item) => `- ${item}`),
+                            '',
+                            'FAQ:',
+                            ...kit.productHuntAssets.faq.flatMap((item) => [`Q: ${item.question}`, `A: ${item.answer}`, '']),
+                            'Gallery captions:',
+                            ...kit.productHuntAssets.galleryCaptions.map((item) => `- ${item}`)
+                          ].join('\n');
+                          return onCopy('ph', text);
+                        }}
+                      >
+                        <PlatformIcon platform="productHunt" />
+                      </IconButton>
+                      <IconButton
+                        label="Publish"
+                        onClick={() => {
+                          openPublish(buildIntentUrl({ platform: 'productHunt', repoUrl: kit.repo.url }));
+                          void onCopy('ph', [kit.productHuntAssets.tagline, '', kit.productHuntAssets.shortDescription, '', kit.productHuntAssets.firstComment].join('\n'));
+                        }}
+                      >
+                        <ExternalLinkIcon />
+                      </IconButton>
+                    </div>
+                  }
+                >
+                  <div className="space-y-4">
+                    <div>
+                      <h3 className="font-semibold text-slate-900">Tagline</h3>
+                      <p className="mt-1 rounded-2xl bg-slate-50 p-4 text-sm leading-6 text-slate-700">{kit.productHuntAssets.tagline}</p>
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-slate-900">Short description</h3>
+                      <p className="mt-1 rounded-2xl bg-slate-50 p-4 text-sm leading-6 text-slate-700">{kit.productHuntAssets.shortDescription}</p>
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-slate-900">First comment</h3>
+                      <p className="mt-1 whitespace-pre-line rounded-2xl bg-slate-50 p-4 text-sm leading-6 text-slate-700">{kit.productHuntAssets.firstComment}</p>
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-slate-900">Key features</h3>
+                      <ul className="mt-1 space-y-2 rounded-2xl bg-slate-50 p-4 text-sm leading-6 text-slate-700">
+                        {kit.productHuntAssets.keyFeatures.map((feature) => (
+                          <li key={feature}>• {feature}</li>
+                        ))}
+                      </ul>
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-slate-900">FAQ</h3>
+                      <div className="mt-1 space-y-3 rounded-2xl bg-slate-50 p-4 text-sm leading-6 text-slate-700">
+                        {kit.productHuntAssets.faq.map((item) => (
+                          <div key={item.question}>
+                            <p className="font-semibold text-slate-900">{item.question}</p>
+                            <p className="text-slate-700">{item.answer}</p>
+                          </div>
+                        ))}
                       </div>
-                    );
-                  })}
-                </div>
-              </Card>
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-slate-900">Gallery captions</h3>
+                      <ul className="mt-1 space-y-2 rounded-2xl bg-slate-50 p-4 text-sm leading-6 text-slate-700">
+                        {kit.productHuntAssets.galleryCaptions.map((caption) => (
+                          <li key={caption}>• {caption}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                </Card>
+              )}
+
+              {rightPanel === 'rules' && (
+                <Card
+                  title="Community Rule Check"
+                  actions={
+                    <div className="flex items-center gap-2">
+                      {copyHint('rules')}
+                      <IconButton
+                        label="Copy"
+                        tone={copyTone('rules')}
+                        onClick={() =>
+                          onCopy('rules', communityChannel === 'hackerNews' ? kit.communityChecks.hackerNews.rewrite : kit.communityChecks.reddit.rewrite)
+                        }
+                      >
+                        <PlatformIcon platform={communityChannel === 'hackerNews' ? 'hackerNews' : 'reddit'} />
+                      </IconButton>
+                      <IconButton
+                        label="Publish"
+                        onClick={() => {
+                          const url =
+                            communityChannel === 'hackerNews'
+                              ? buildIntentUrl({
+                                  platform: 'hackerNews',
+                                  repoUrl: kit.repo.url,
+                                  title: `Show HN: ${kit.repo.name} — ${kit.repo.description || 'a developer tool'}`
+                                })
+                              : buildIntentUrl({
+                                  platform: 'reddit',
+                                  repoUrl: kit.repo.url,
+                                  title: `${kit.repo.name}: ${kit.positioning.oneLiner}`,
+                                  text: kit.communityChecks.reddit.rewrite
+                                });
+                          openPublish(url);
+                          void onCopy('rules', communityChannel === 'hackerNews' ? kit.communityChecks.hackerNews.rewrite : kit.communityChecks.reddit.rewrite);
+                        }}
+                      >
+                        <ExternalLinkIcon />
+                      </IconButton>
+                    </div>
+                  }
+                >
+                  <div className="mb-4 flex flex-wrap gap-2">
+                    <TabButton active={communityChannel === 'hackerNews'} onClick={() => setCommunityChannel('hackerNews')}>
+                      Hacker News
+                    </TabButton>
+                    <TabButton active={communityChannel === 'reddit'} onClick={() => setCommunityChannel('reddit')}>
+                      Reddit
+                    </TabButton>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div>
+                      <p className="text-sm font-semibold text-slate-900">Risks</p>
+                      <ul className="mt-1 space-y-2 rounded-2xl bg-slate-50 p-4 text-sm leading-6 text-slate-700">
+                        {(communityChannel === 'hackerNews' ? kit.communityChecks.hackerNews.risks : kit.communityChecks.reddit.risks).map((risk) => (
+                          <li key={risk}>• {risk}</li>
+                        ))}
+                      </ul>
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-slate-900">Suggested rewrite</p>
+                      <p className="mt-1 whitespace-pre-line rounded-2xl bg-slate-50 p-4 text-sm leading-6 text-slate-700">
+                        {communityChannel === 'hackerNews' ? kit.communityChecks.hackerNews.rewrite : kit.communityChecks.reddit.rewrite}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-slate-900">Checklist</p>
+                      <ul className="mt-1 space-y-2 rounded-2xl bg-slate-50 p-4 text-sm leading-6 text-slate-700">
+                        {(communityChannel === 'hackerNews' ? kit.communityChecks.hackerNews.checklist : kit.communityChecks.reddit.checklist).map((item) => (
+                          <li key={item}>• {item}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                </Card>
+              )}
+
+              {rightPanel === 'tasks' && (
+                <Card title="Growth Task Board">
+                  <p className="mb-4 text-sm text-slate-500">Select a task to write it back to the target repository as a GitHub Issue.</p>
+                  <div className="space-y-3">
+                    {kit.growthTasks.map((task) => {
+                      const created = createdIssues[task.title];
+                      const isCreating = creatingIssueTitle === task.title;
+                      return (
+                        <div key={task.title} className="rounded-2xl border border-slate-100 p-4">
+                          <div className="mb-2 flex items-start justify-between gap-3">
+                            <h3 className="font-semibold text-slate-900">{task.title}</h3>
+                            <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700">{task.priority}</span>
+                          </div>
+                          <p className="mb-4 text-sm text-slate-600">{task.reason}</p>
+                          {created ? (
+                            <a
+                              href={created.url}
+                              target="_blank"
+                              className="inline-flex rounded-xl bg-green-100 px-3 py-2 text-sm font-semibold text-green-700 hover:bg-green-200"
+                            >
+                              Open GitHub Issue #{created.number}
+                            </a>
+                          ) : (
+                            <button
+                              onClick={() => createGitHubIssue(task)}
+                              disabled={Boolean(creatingIssueTitle)}
+                              className="rounded-xl bg-slate-950 px-3 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                              {isCreating ? 'Creating issue...' : 'Create GitHub Issue'}
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </Card>
+              )}
             </div>
           </div>
         )}
