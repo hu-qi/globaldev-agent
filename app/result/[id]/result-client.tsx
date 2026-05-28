@@ -202,6 +202,27 @@ function buildIntentUrl(input: {
   return 'https://www.producthunt.com/posts/new';
 }
 
+function Toast({ message, tone, visible }: { message: string; tone: 'success' | 'danger'; visible: boolean }) {
+  return (
+    <div
+      aria-live="polite"
+      className={[
+        'pointer-events-none fixed right-5 top-5 z-50 transition-all',
+        visible ? 'translate-y-0 opacity-100' : '-translate-y-2 opacity-0'
+      ].join(' ')}
+    >
+      <div
+        className={[
+          'rounded-2xl border px-4 py-3 text-sm font-semibold shadow-lg',
+          tone === 'success' ? 'border-green-200 bg-green-50 text-green-800' : 'border-red-200 bg-red-50 text-red-800'
+        ].join(' ')}
+      >
+        {message}
+      </div>
+    </div>
+  );
+}
+
 export function ResultHeaderActions() {
   const [copyState, setCopyState] = useState<'copied' | 'error' | null>(null);
 
@@ -222,16 +243,7 @@ export function ResultHeaderActions() {
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      {copyState && (
-        <span
-          className={[
-            'rounded-full px-2 py-1 text-xs font-semibold',
-            copyState === 'copied' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-          ].join(' ')}
-        >
-          {copyState === 'copied' ? 'Link copied' : 'Copy failed'}
-        </span>
-      )}
+      <Toast message={copyState === 'copied' ? 'Link copied' : 'Copy failed'} tone={copyState === 'copied' ? 'success' : 'danger'} visible={Boolean(copyState)} />
       <button
         type="button"
         onClick={copyResultLink}
@@ -368,4 +380,3 @@ export function ResultLaunchDraftsCard({
     </section>
   );
 }
-
