@@ -60,6 +60,9 @@ export async function fetchRepoSnapshot(input: string): Promise<RepoSnapshot> {
 
   const repoResponse = await client.repos.get({ owner: ref.owner, repo: ref.repo });
   const repo = repoResponse.data;
+  if (repo.private) {
+    throw new Error('Only public GitHub repositories are supported.');
+  }
 
   let readme = '';
   try {
