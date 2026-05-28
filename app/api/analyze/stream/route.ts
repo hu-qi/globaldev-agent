@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { runGlobalDevAgentWithProgress } from '../../../../lib/agent';
-import { generateResultId, isResultStoreConfigured, storePublishedResult } from '../../../../lib/resultStore';
+import { buildPrettyResultPath, generateResultId, isResultStoreConfigured, storePublishedResult } from '../../../../lib/resultStore';
 
 const requestSchema = z.object({
   repoUrl: z.string().min(3)
@@ -42,7 +42,7 @@ export async function POST(request: Request) {
         if (isResultStoreConfigured()) {
           send({ type: 'stage', name: 'publish', status: 'start', at: new Date().toISOString() });
           const id = generateResultId();
-          const url = `/result/${id}`;
+          const url = buildPrettyResultPath(repoUrl, id);
           const createdAt = new Date().toISOString();
           publishedKit = { ...kit, result: { id, url } };
           await storePublishedResult({ id, createdAt, repoUrl, kit: publishedKit });

@@ -54,6 +54,42 @@ export function generateResultId() {
   return crypto.randomUUID().replaceAll('-', '').slice(0, 12);
 }
 
+function slugify(value: string) {
+  const normalized = value
+    .toLowerCase()
+    .replaceAll(/[^a-z0-9]+/g, '-')
+    .replaceAll(/-+/g, '-')
+    .replaceAll(/^-|-$/g, '');
+  return normalized || 'repo';
+}
+
+export function buildResultSlug(repoUrl: string) {
+  try {
+    const url = new URL(repoUrl);
+    const segments = url.pathname.split('/').filter(Boolean);
+    const owner = segments[0] || '';
+    const repo = segments[1] || '';
+    const raw = owner && repo ? `${owner}-${repo}` : segments.slice(0, 2).join('-');
+    return slugify(raw).slice(0, 60);
+  } catch {
+    const segments = repoUrl.split('/').filter(Boolean);
+    const raw = segments.slice(-2).join('-');
+    return slugify(raw).slice(0, 60);
+  }
+}
+
+export function buildPrettyResultPath(repoUrl: string, id: string) {
+  return `/r/${buildResultSlug(repoUrl)}-${id}`;
+}
+
+export function parsePrettyResultParam(param: string) {
+  const lastDash = param.lastIndexOf('-');
+  if (lastDash <= 0) return null;
+  const id = param.slice(lastDash + 1);
+  if (!/^[a-z0-9]{8,64}$/.test(id)) return null;
+  return { id };
+}
+
 export async function storePublishedResult(result: PublishedResult) {
   const key = `result:${result.id}`;
   const body = JSON.stringify(result);
@@ -92,4 +128,3 @@ export async function listPublishedResults(limit: number) {
   }
   return results;
 }
-
