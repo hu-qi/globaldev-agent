@@ -200,8 +200,11 @@ When `GMI_API_KEY` is not set, the app returns a high-quality mocked Global Laun
 
 ## Roadmap
 
-- [ ] Create GitHub Issues from generated growth tasks.
-- [ ] Add Product Hunt launch asset generator.
-- [ ] Add Reddit/Hacker News community rule checker.
+- [x] Create GitHub Issues from generated growth tasks.
+- [x] Add Product Hunt launch asset generator.
+- [x] Add Reddit/Hacker News community rule checker.
+- [ ] Publishable result pages at `/result/<id>` (SSR + metadata + sitemap for SEO-ready UGC).
+- [ ] Bulk-create issues from the entire task board.
+- [ ] Configure issue labels / assignees / templates.
 - [ ] Add GitCode repository support.
 - [ ] Add feedback ingestion from Product Hunt, Reddit, Hacker News, and X.

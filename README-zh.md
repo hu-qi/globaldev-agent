@@ -2,6 +2,8 @@
 
 **从 README 到全球发布。**
 
+[English README](./README.md)
+
 GlobalDev Agent 是一个面向开源项目、开发者工具和独立产品的 AI DevRel / 出海增长 Agent。用户输入一个 GitHub 仓库地址，系统会自动读取 README、仓库元数据和近期 Issues，并生成一份完整的 **Global Launch Kit 出海增长包**，包括产品定位、海外开发者用户画像、Product Hunt / Hacker News / Reddit / X / LinkedIn 发布文案、Issue 反馈洞察和增长任务看板。
 
 ## 项目定位
@@ -99,6 +101,15 @@ GMI Cloud 调用参数设计如下：
 - GitHub Actions CI
 - Vercel 部署
 
+## 功能特性
+
+- 支持输入 `owner/repo` 或完整 GitHub URL
+- 通过 GitHub REST API 获取 README 与仓库元数据
+- 配置 `GITHUB_TOKEN` 后可读取近期 GitHub Issues（私有仓库/更高频率/更稳定）
+- 通过 GMI Cloud Inference Engine 生成结构化 Global Launch Kit
+- 默认使用环境变量配置推理参数与模型
+- 未配置 `GMI_API_KEY` 时提供高质量的 mock 输出，便于本地演示与预览 UI
+
 ## 本地运行
 
 ```bash
@@ -141,6 +152,8 @@ GMI_MAX_TOKENS=128000
 ```
 
 注意：不要把真实 `GMI_API_KEY` 提交到 GitHub。建议在本地 `.env.local`、Vercel Environment Variables 和 GitHub Actions Secrets 中分别配置。
+
+当未配置 `GMI_API_KEY` 时，应用会返回高质量的 mock Global Launch Kit 以便演示。在正式参赛演示与对外部署中，请配置 `GMI_API_KEY` 以确保所有推理与内容生成都通过 GMI Cloud Inference Engine 完成。
 
 ## 部署到 Vercel
 
@@ -216,6 +229,8 @@ GMI smoke test 会验证：
 - JSON response format 是否可用
 - 返回内容是否可解析
 
+当 `GMI_API_KEY` 未配置时，smoke test 会输出 skip 信息并以成功状态退出，避免 fork PR 因无法读取 Secrets 而失败。
+
 ## 演示脚本
 
 1. 打开首页。
@@ -236,8 +251,12 @@ GMI smoke test 会验证：
 
 ## Roadmap
 
-- [ ] 一键将增长任务创建为 GitHub Issues。
+- [x] 将增长任务创建为 GitHub Issues（单条创建）。
+- [x] 生成 Product Hunt 发布资产包。
+- [x] 增加海外社区规则检查（Hacker News / Reddit）。
+- [ ] 结果页发布与 SEO：支持 `/result/<id>`（SSR + 元信息 + sitemap，作为 UGC 内容页）。
+- [ ] 将任务看板批量创建为 GitHub Issues。
+- [ ] 支持可配置 Issue labels / assignees / 模板。
 - [ ] 支持 GitCode 仓库输入。
 - [ ] 接入 Product Hunt、Reddit、Hacker News 真实反馈。
-- [ ] 增加海外社区规则检查。
 - [ ] 增加发布日历和增长复盘报告。
