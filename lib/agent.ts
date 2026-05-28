@@ -169,9 +169,20 @@ function fallbackLaunchKit(snapshot: RepoSnapshot): LaunchKit {
 }
 
 export async function runGlobalDevAgent(repoUrl: string): Promise<LaunchKit> {
+  return runGlobalDevAgentWithProgress(repoUrl);
+}
+
+export async function runGlobalDevAgentWithProgress(
+  repoUrl: string,
+  hooks?: { onStage?: (input: { name: 'repo' | 'llm'; status: 'start' | 'done' }) => void }
+): Promise<LaunchKit> {
+  hooks?.onStage?.({ name: 'repo', status: 'start' });
   const snapshot = await fetchRepoSnapshot(repoUrl);
+  hooks?.onStage?.({ name: 'repo', status: 'done' });
+
   const fallback = fallbackLaunchKit(snapshot);
 
+  hooks?.onStage?.({ name: 'llm', status: 'start' });
   const response = await generateText([
     {
       role: 'system',
@@ -193,7 +204,7 @@ export async function runGlobalDevAgent(repoUrl: string): Promise<LaunchKit> {
 
   const generated = safeJsonParse<Partial<LaunchKit>>(response, {});
 
-  return {
+  const kit: LaunchKit = {
     ...fallback,
     product: generated.product || fallback.product,
     positioning: generated.positioning || fallback.positioning,
@@ -203,4 +214,7 @@ export async function runGlobalDevAgent(repoUrl: string): Promise<LaunchKit> {
     issueInsights: generated.issueInsights || fallback.issueInsights,
     growthTasks: generated.growthTasks || fallback.growthTasks
   };
+
+  hooks?.onStage?.({ name: 'llm', status: 'done' });
+  return kit;
 }
