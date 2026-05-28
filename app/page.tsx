@@ -284,20 +284,11 @@ export default function Home() {
   const abortRef = useRef<AbortController | null>(null);
   const [loadingStartedAt, setLoadingStartedAt] = useState<number | null>(null);
   const [elapsedMs, setElapsedMs] = useState(0);
-
-  const agentSteps = useMemo(
-    () => ['Repo Analyzer', 'Product Analyst', 'Market Agent', 'Content Agent', 'Feedback Agent', 'Growth PM'] as const,
-    []
-  );
-
-  const currentStep = useMemo(() => {
-    if (!loadingStartedAt) return null;
-    const stepMs = 6000;
-    const idx = Math.min(agentSteps.length - 1, Math.floor(elapsedMs / stepMs));
-    const within = (elapsedMs % stepMs) / stepMs;
-    const progress = Math.min(0.98, (idx + within) / agentSteps.length);
-    return { idx, progress };
-  }, [agentSteps.length, elapsedMs, loadingStartedAt]);
+  const [stages, setStages] = useState<{
+    repo: 'pending' | 'running' | 'done';
+    llm: 'pending' | 'running' | 'done';
+    publish: 'pending' | 'running' | 'done' | 'skipped';
+  }>({ repo: 'pending', llm: 'pending', publish: 'pending' });
 
   useEffect(() => {
     if (!copyState) return;
@@ -321,6 +312,14 @@ export default function Home() {
 
   function cancelRun() {
     abortRef.current?.abort();
+  }
+
+  function stageProgress() {
+    const values = [stages.repo, stages.llm, stages.publish === 'skipped' ? 'done' : stages.publish];
+    const completed = values.filter((value) => value === 'done').length;
+    const total = values.length;
+    const runningBoost = values.some((value) => value === 'running') ? 0.1 : 0;
+    return Math.min(0.98, completed / total + runningBoost);
   }
 
   const activeLaunchText = useMemo(() => {
@@ -376,17 +375,63 @@ export default function Home() {
     setKit(null);
     setLoadingStartedAt(Date.now());
     setElapsedMs(0);
+    setStages({ repo: 'pending', llm: 'pending', publish: 'pending' });
 
     try {
-      const response = await fetch('/api/analyze', {
+      const response = await fetch('/api/analyze/stream', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ repoUrl }),
         signal: abortRef.current.signal
       });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Failed to analyze repository.');
-      setKit(data);
+      if (!response.ok || !response.body) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || 'Failed to analyze repository.');
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const chunk = await reader.read();
+        if (chunk.done) break;
+        buffer += decoder.decode(chunk.value, { stream: true });
+        const parts = buffer.split('\n\n');
+        buffer = parts.pop() || '';
+
+        for (const part of parts) {
+          const line = part
+            .split('\n')
+            .map((item) => item.trim())
+            .find((item) => item.startsWith('data: '));
+          if (!line) continue;
+
+          const payload = JSON.parse(line.slice('data: '.length)) as
+            | { type: 'stage'; name: 'repo' | 'llm' | 'publish'; status: 'start' | 'done' }
+            | { type: 'result'; kit: LaunchKit }
+            | { type: 'error'; message: string };
+
+          if (payload.type === 'stage') {
+            setStages((current) => {
+              const next = { ...current };
+              if (payload.name === 'repo') next.repo = payload.status === 'start' ? 'running' : 'done';
+              if (payload.name === 'llm') next.llm = payload.status === 'start' ? 'running' : 'done';
+              if (payload.name === 'publish') next.publish = payload.status === 'start' ? 'running' : 'done';
+              return next;
+            });
+          }
+
+          if (payload.type === 'error') {
+            throw new Error(payload.message || 'Failed to analyze repository.');
+          }
+
+          if (payload.type === 'result') {
+            setKit(payload.kit);
+            setStages((current) => (current.publish === 'pending' ? { ...current, publish: 'skipped' } : current));
+          }
+        }
+      }
     } catch (err) {
       if (err instanceof DOMException && err.name === 'AbortError') {
         setError('Cancelled.');
@@ -484,7 +529,7 @@ export default function Home() {
               <div className="mt-5">
                 <div className="flex items-center justify-between text-sm font-semibold text-slate-800">
                   <span>
-                    {currentStep ? `Step ${currentStep.idx + 1}/${agentSteps.length}: ${agentSteps[currentStep.idx]}` : 'Starting...'}
+                    {stages.llm === 'done' ? 'Finalizing...' : stages.repo === 'running' ? 'Fetching repo snapshot...' : stages.llm === 'running' ? 'Generating launch kit...' : 'Starting...'}
                   </span>
                   <button
                     type="button"
@@ -497,14 +542,25 @@ export default function Home() {
                 <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-slate-100">
                   <div
                     className="h-full rounded-full bg-blue-600 transition-[width]"
-                    style={{ width: `${Math.floor((currentStep?.progress ?? 0.02) * 100)}%` }}
+                    style={{ width: `${Math.floor(Math.max(0.02, stageProgress()) * 100)}%` }}
                   />
                 </div>
               </div>
 
-              <p className="mt-5 text-sm text-slate-700">
-                Running {agentSteps.join(', ')}...
-              </p>
+              <div className="mt-5 grid gap-2 text-left text-sm text-slate-700">
+                <div className="flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3">
+                  <span>Repo snapshot</span>
+                  <span className="font-semibold text-slate-600">{stages.repo}</span>
+                </div>
+                <div className="flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3">
+                  <span>Launch kit generation</span>
+                  <span className="font-semibold text-slate-600">{stages.llm}</span>
+                </div>
+                <div className="flex items-center justify-between rounded-2xl bg-slate-50 px-4 py-3">
+                  <span>Publish result page</span>
+                  <span className="font-semibold text-slate-600">{stages.publish}</span>
+                </div>
+              </div>
             </div>
           </div>
         )}
