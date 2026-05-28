@@ -1,6 +1,48 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import type { Metadata } from 'next';
 import { getPublishedResult, isResultStoreConfigured } from '../../../lib/resultStore';
+
+export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
+  const canonical = `/result/${params.id}`;
+  if (!isResultStoreConfigured()) {
+    return {
+      title: 'Result Pages Unavailable — GlobalDev Agent',
+      robots: { index: false, follow: false },
+      alternates: { canonical }
+    };
+  }
+
+  const result = await getPublishedResult(params.id);
+  if (!result) {
+    return {
+      title: 'Result Not Found — GlobalDev Agent',
+      robots: { index: false, follow: false },
+      alternates: { canonical }
+    };
+  }
+
+  const title = `${result.kit.repo.name} — Global Launch Kit`;
+  const description = result.kit.positioning.oneLiner;
+
+  return {
+    title,
+    description,
+    alternates: { canonical },
+    robots: { index: true, follow: true },
+    openGraph: {
+      title,
+      description,
+      type: 'article',
+      url: canonical
+    },
+    twitter: {
+      card: 'summary',
+      title,
+      description
+    }
+  };
+}
 
 export default async function ResultPage({ params }: { params: { id: string } }) {
   if (!isResultStoreConfigured()) {
