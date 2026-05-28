@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { notFound } from 'next/navigation';
 import { getPublishedResult, isResultStoreConfigured } from '../../../lib/resultStore';
 
 export default async function ResultPage({ params }: { params: { id: string } }) {
@@ -17,19 +18,7 @@ export default async function ResultPage({ params }: { params: { id: string } })
   }
 
   const result = await getPublishedResult(params.id);
-  if (!result) {
-    return (
-      <main className="mx-auto max-w-5xl px-6 py-12">
-        <h1 className="text-2xl font-semibold text-slate-950">Result Not Found</h1>
-        <p className="mt-3 text-slate-700">This result id does not exist.</p>
-        <p className="mt-6">
-          <Link href="/" className="font-semibold text-slate-950 underline">
-            Back to home
-          </Link>
-        </p>
-      </main>
-    );
-  }
+  if (!result) notFound();
 
   const { kit } = result;
 
@@ -106,4 +95,3 @@ export default async function ResultPage({ params }: { params: { id: string } })
     </main>
   );
 }
-
