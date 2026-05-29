@@ -204,6 +204,7 @@ When `GMI_API_KEY` is not set, the app returns a high-quality mocked Global Laun
 - [x] Add Product Hunt launch asset generator.
 - [x] Add Reddit/Hacker News community rule checker.
 - [x] Publishable result pages at `/result/<id>` (SSR + metadata + sitemap for SEO-ready UGC).
-- [ ] Bulk-create issues from the entire task board.
+- [x] Bulk-create issues from the entire task board.
+- [x] Add site logo and favicon assets.
 - [ ] Configure issue labels and templates (assignees optional).
 - [ ] Add feedback ingestion via a scheduled agent (start with manual import, then Product Hunt / Reddit / Hacker News / X polling).
