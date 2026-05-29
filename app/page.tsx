@@ -78,6 +78,7 @@ type PublicResultPreview = {
 type PartnerLink = {
   name: string;
   href: string;
+  slogan?: string;
   imageSrc?: string;
   imageAlt?: string;
   imageWidth?: number;
@@ -96,6 +97,7 @@ const sponsorPartners: PartnerLink[] = (() => {
         const candidate = item as {
           name?: unknown;
           href?: unknown;
+          slogan?: unknown;
           imageSrc?: unknown;
           imageAlt?: unknown;
           imageWidth?: unknown;
@@ -103,6 +105,7 @@ const sponsorPartners: PartnerLink[] = (() => {
         };
         if (typeof candidate.name !== 'string' || typeof candidate.href !== 'string') return null;
         const partner: PartnerLink = { name: candidate.name, href: candidate.href };
+        if (typeof candidate.slogan === 'string') partner.slogan = candidate.slogan;
         if (typeof candidate.imageSrc === 'string') partner.imageSrc = candidate.imageSrc;
         if (typeof candidate.imageAlt === 'string') partner.imageAlt = candidate.imageAlt;
         if (typeof candidate.imageWidth === 'number' && Number.isFinite(candidate.imageWidth)) partner.imageWidth = candidate.imageWidth;
@@ -114,6 +117,55 @@ const sponsorPartners: PartnerLink[] = (() => {
     return [];
   }
 })();
+
+function SponsorView({ partner }: { partner: PartnerLink }) {
+  return (
+    <div className="w-full text-center">
+      <p className="mb-2 text-xs text-slate-600">
+        <a href={partner.href} target="_blank" rel="noreferrer" className="font-semibold text-slate-900 underline underline-offset-4">
+          {partner.name}
+        </a>
+        {partner.slogan ? <span className="text-slate-500"> — {partner.slogan}</span> : null}
+      </p>
+      {partner.imageSrc ? (
+        <a
+          href={partner.href}
+          target="_blank"
+          rel="noreferrer"
+          className="mx-auto block w-full max-w-[720px] overflow-hidden rounded-2xl border border-slate-200 bg-white p-2 hover:bg-slate-50"
+        >
+          <div
+            className="relative w-full"
+            style={{
+              aspectRatio:
+                typeof partner.imageWidth === 'number' && typeof partner.imageHeight === 'number'
+                  ? `${partner.imageWidth} / ${partner.imageHeight}`
+                  : '800 / 533'
+            }}
+          >
+            <Image
+              src={partner.imageSrc}
+              alt={partner.imageAlt || partner.name}
+              fill
+              sizes="(max-width: 768px) 100vw, 720px"
+              className="object-contain"
+              unoptimized
+            />
+          </div>
+        </a>
+      ) : (
+        <a
+          href={partner.href}
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+        >
+          {partner.name}
+        </a>
+      )}
+    </div>
+  );
+}
 
 function Card({ title, actions, children }: { title: string; actions?: React.ReactNode; children: React.ReactNode }) {
   return (
@@ -1386,47 +1438,10 @@ export default function Home() {
         <div className="border-t border-slate-200 pt-6">
           {sponsorPartners.length > 0 && (
             <div className="mb-5">
-              <div className="flex w-full flex-col gap-3 md:flex-row md:flex-wrap md:justify-end">
-                {sponsorPartners.map((partner) =>
-                  partner.imageSrc ? (
-                    <a
-                      key={partner.href}
-                      href={partner.href}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="block w-full max-w-[720px] overflow-hidden rounded-2xl border border-slate-200 bg-white p-2 hover:bg-slate-50"
-                    >
-                      <div
-                        className="relative w-full"
-                        style={{
-                          aspectRatio:
-                            typeof partner.imageWidth === 'number' && typeof partner.imageHeight === 'number'
-                              ? `${partner.imageWidth} / ${partner.imageHeight}`
-                              : '800 / 533'
-                        }}
-                      >
-                        <Image
-                          src={partner.imageSrc}
-                          alt={partner.imageAlt || partner.name}
-                          fill
-                          sizes="(max-width: 768px) 100vw, 720px"
-                          className="object-contain"
-                          unoptimized
-                        />
-                      </div>
-                    </a>
-                  ) : (
-                    <a
-                      key={partner.href}
-                      href={partner.href}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-                    >
-                      {partner.name}
-                    </a>
-                  )
-                )}
+              <div className="mx-auto flex w-full max-w-3xl flex-col items-center justify-center gap-5">
+                {sponsorPartners.map((partner) => (
+                  <SponsorView key={partner.href} partner={partner} />
+                ))}
               </div>
             </div>
           )}
