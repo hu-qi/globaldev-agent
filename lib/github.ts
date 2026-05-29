@@ -170,6 +170,30 @@ function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function isLabelPermissionError(error: unknown) {
+  if (!error || typeof error !== 'object') return false;
+  const maybeAny = error as { message?: unknown; status?: unknown; response?: unknown };
+  const message = typeof maybeAny.message === 'string' ? maybeAny.message : '';
+  if (message.toLowerCase().includes('permission to create labels')) return true;
+  if (message.toLowerCase().includes('field') && message.toLowerCase().includes('label') && message.toLowerCase().includes('unauthorized')) {
+    return true;
+  }
+
+  const response = maybeAny.response as { status?: unknown; data?: unknown } | undefined;
+  const status = typeof response?.status === 'number' ? response.status : typeof maybeAny.status === 'number' ? maybeAny.status : null;
+  if (status !== 403) return false;
+
+  const data = response?.data as { errors?: unknown } | undefined;
+  const errors = Array.isArray(data?.errors) ? (data?.errors as Array<unknown>) : [];
+  for (const item of errors) {
+    if (!item || typeof item !== 'object') continue;
+    const e = item as { field?: unknown; code?: unknown };
+    if (e.field === 'label' && e.code === 'unauthorized') return true;
+  }
+
+  return false;
+}
+
 export async function createGrowthIssue(input: { repoUrl: string } & GrowthTaskInput): Promise<CreatedIssue> {
   if (!process.env.GITHUB_TOKEN) {
     throw new Error('GITHUB_TOKEN is not configured. Add it to Vercel Environment Variables with Issues write permission.');
@@ -179,13 +203,24 @@ export async function createGrowthIssue(input: { repoUrl: string } & GrowthTaskI
   const client = octokit();
   const body = buildGrowthIssueBody(input);
 
-  const response = await client.issues.create({
-    owner: ref.owner,
-    repo: ref.repo,
-    title: growthIssueTitle(input.title),
-    body,
-    labels: ['globaldev-agent', 'growth']
-  });
+  let response;
+  try {
+    response = await client.issues.create({
+      owner: ref.owner,
+      repo: ref.repo,
+      title: growthIssueTitle(input.title),
+      body,
+      labels: ['globaldev-agent', 'growth']
+    });
+  } catch (error) {
+    if (!isLabelPermissionError(error)) throw error;
+    response = await client.issues.create({
+      owner: ref.owner,
+      repo: ref.repo,
+      title: growthIssueTitle(input.title),
+      body
+    });
+  }
 
   return {
     number: response.data.number,
@@ -211,7 +246,6 @@ export async function createGrowthIssuesBulkWithProgress(
     owner: ref.owner,
     repo: ref.repo,
     state: 'all',
-    labels: 'globaldev-agent',
     per_page: 100,
     sort: 'updated',
     direction: 'desc'
@@ -243,13 +277,24 @@ export async function createGrowthIssuesBulkWithProgress(
 
     try {
       const body = buildGrowthIssueBody({ repoUrl: input.repoUrl, ...task });
-      const response = await client.issues.create({
-        owner: ref.owner,
-        repo: ref.repo,
-        title,
-        body,
-        labels: ['globaldev-agent', 'growth']
-      });
+      let response;
+      try {
+        response = await client.issues.create({
+          owner: ref.owner,
+          repo: ref.repo,
+          title,
+          body,
+          labels: ['globaldev-agent', 'growth']
+        });
+      } catch (error) {
+        if (!isLabelPermissionError(error)) throw error;
+        response = await client.issues.create({
+          owner: ref.owner,
+          repo: ref.repo,
+          title,
+          body
+        });
+      }
 
       const created: CreatedIssue = {
         number: response.data.number,
