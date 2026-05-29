@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { notFound, permanentRedirect } from 'next/navigation';
 import type { Metadata } from 'next';
 import {
@@ -104,7 +105,22 @@ export default async function PrettyResultPage({ params }: { params: { slugId: s
     <main className="mx-auto max-w-5xl px-6 py-12">
       <div className="flex flex-wrap items-baseline justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-semibold text-slate-950">{kit.repo.name}</h1>
+          <div className="flex items-center gap-3">
+            {kit.repo.ownerAvatarUrl ? (
+              <Image
+                src={kit.repo.ownerAvatarUrl}
+                alt=""
+                width={36}
+                height={36}
+                className="h-9 w-9 rounded-full border border-slate-200 bg-white object-cover"
+              />
+            ) : (
+              <div className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-sm font-semibold text-slate-600">
+                {kit.repo.name.slice(0, 1).toUpperCase()}
+              </div>
+            )}
+            <h1 className="text-3xl font-semibold text-slate-950">{kit.repo.name}</h1>
+          </div>
           <p className="mt-2 text-slate-700">{kit.positioning.oneLiner}</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
@@ -198,7 +214,22 @@ export default async function PrettyResultPage({ params }: { params: { slugId: s
           <ul className="mt-4 grid gap-3 md:grid-cols-3">
             {latest.map((item) => (
               <li key={item.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                <p className="text-sm font-semibold text-slate-950">{item.kit.repo.name}</p>
+                <div className="flex items-center gap-3">
+                  {item.kit.repo.ownerAvatarUrl ? (
+                    <Image
+                      src={item.kit.repo.ownerAvatarUrl}
+                      alt=""
+                      width={28}
+                      height={28}
+                      className="h-7 w-7 rounded-full border border-slate-200 bg-white object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-7 w-7 items-center justify-center rounded-full border border-slate-200 bg-white text-xs font-semibold text-slate-600">
+                      {item.kit.repo.name.slice(0, 1).toUpperCase()}
+                    </div>
+                  )}
+                  <p className="text-sm font-semibold text-slate-950">{item.kit.repo.name}</p>
+                </div>
                 <p className="mt-2 text-sm text-slate-700">{item.kit.positioning.oneLiner}</p>
                 <Link
                   href={buildPrettyResultPath(item.repoUrl, item.id)}
@@ -231,4 +262,3 @@ export default async function PrettyResultPage({ params }: { params: { slugId: s
     </main>
   );
 }
-
