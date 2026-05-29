@@ -277,6 +277,9 @@ export default function Home() {
   const [creatingIssueTitle, setCreatingIssueTitle] = useState<string | null>(null);
   const [createdIssues, setCreatedIssues] = useState<Record<string, CreatedIssue>>({});
   const [issueError, setIssueError] = useState<string | null>(null);
+  const [selectedTaskTitles, setSelectedTaskTitles] = useState<string[]>([]);
+  const [bulkIssueProgress, setBulkIssueProgress] = useState<{ done: number; total: number } | null>(null);
+  const [bulkCreatingIssues, setBulkCreatingIssues] = useState(false);
   const [rightPanel, setRightPanel] = useState<'launch' | 'ph' | 'rules' | 'tasks'>('launch');
   const [launchChannel, setLaunchChannel] = useState<'productHunt' | 'hackerNews' | 'reddit' | 'xThread' | 'linkedin'>('productHunt');
   const [communityChannel, setCommunityChannel] = useState<'hackerNews' | 'reddit'>('hackerNews');
@@ -372,6 +375,9 @@ export default function Home() {
     setError(null);
     setIssueError(null);
     setCreatedIssues({});
+    setSelectedTaskTitles([]);
+    setBulkIssueProgress(null);
+    setBulkCreatingIssues(false);
     setKit(null);
     setLoadingStartedAt(Date.now());
     setElapsedMs(0);
@@ -466,6 +472,66 @@ export default function Home() {
       setIssueError(err instanceof Error ? err.message : 'Failed to create GitHub Issue.');
     } finally {
       setCreatingIssueTitle(null);
+    }
+  }
+
+  function toggleTaskSelected(title: string) {
+    setSelectedTaskTitles((current) => (current.includes(title) ? current.filter((item) => item !== title) : [...current, title]));
+  }
+
+  function setAllTasksSelected(titles: string[]) {
+    setSelectedTaskTitles((current) => (current.length === titles.length ? [] : titles));
+  }
+
+  async function createGitHubIssuesBulk(tasks: GrowthTask[]) {
+    if (tasks.length === 0) return;
+    setBulkCreatingIssues(true);
+    setIssueError(null);
+    setBulkIssueProgress({ done: 0, total: tasks.length });
+
+    try {
+      const response = await fetch('/api/github/issues/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          repoUrl,
+          tasks: tasks.map((task) => ({ title: task.title, priority: task.priority, reason: task.reason }))
+        })
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Failed to create GitHub Issues.');
+
+      const results = (data.results || []) as Array<
+        | { title: string; status: 'created'; issue: CreatedIssue }
+        | { title: string; status: 'skipped'; reason: string }
+        | { title: string; status: 'failed'; error: string }
+      >;
+
+      const created = results.filter((item) => item.status === 'created') as Array<{ title: string; status: 'created'; issue: CreatedIssue }>;
+      const failed = results.filter((item) => item.status === 'failed') as Array<{ title: string; status: 'failed'; error: string }>;
+
+      if (created.length > 0) {
+        setCreatedIssues((current) => {
+          const next = { ...current };
+          for (const item of created) {
+            next[item.title] = item.issue;
+          }
+          return next;
+        });
+      }
+
+      if (failed.length > 0) {
+        setIssueError(`Failed to create ${failed.length} issue(s).`);
+      }
+
+      setBulkIssueProgress({ done: tasks.length, total: tasks.length });
+      setSelectedTaskTitles([]);
+    } catch (err) {
+      setIssueError(err instanceof Error ? err.message : 'Failed to create GitHub Issues.');
+    } finally {
+      setBulkCreatingIssues(false);
+      window.setTimeout(() => setBulkIssueProgress(null), 1200);
     }
   }
 
@@ -903,15 +969,67 @@ export default function Home() {
 
               {rightPanel === 'tasks' && (
                 <Card title="Growth Task Board">
-                  <p className="mb-4 text-sm text-slate-500">Select a task to write it back to the target repository as a GitHub Issue.</p>
+                  <p className="mb-4 text-sm text-slate-500">Select tasks and write them back to the target repository as GitHub Issues.</p>
+                  <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const selectable = kit.growthTasks.filter((task) => !createdIssues[task.title]).map((task) => task.title);
+                          setAllTasksSelected(selectable);
+                        }}
+                        disabled={bulkCreatingIssues || Boolean(creatingIssueTitle)}
+                        className="rounded-full bg-slate-100 px-3 py-1.5 text-sm font-semibold text-slate-800 hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        Select all
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedTaskTitles([])}
+                        disabled={bulkCreatingIssues || Boolean(creatingIssueTitle)}
+                        className="rounded-full bg-slate-100 px-3 py-1.5 text-sm font-semibold text-slate-800 hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        Clear
+                      </button>
+                      <span className="rounded-full bg-slate-50 px-3 py-1.5 text-sm font-semibold text-slate-700">
+                        {selectedTaskTitles.length} selected
+                      </span>
+                      {bulkIssueProgress && (
+                        <span className="rounded-full bg-blue-50 px-3 py-1.5 text-sm font-semibold text-blue-700">
+                          {bulkIssueProgress.done}/{bulkIssueProgress.total}
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const selected = kit.growthTasks.filter((task) => selectedTaskTitles.includes(task.title) && !createdIssues[task.title]);
+                        void createGitHubIssuesBulk(selected);
+                      }}
+                      disabled={bulkCreatingIssues || selectedTaskTitles.length === 0 || Boolean(creatingIssueTitle)}
+                      className="rounded-xl bg-slate-950 px-3 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {bulkCreatingIssues ? 'Creating issues...' : `Create selected (${selectedTaskTitles.length})`}
+                    </button>
+                  </div>
                   <div className="space-y-3">
                     {kit.growthTasks.map((task) => {
                       const created = createdIssues[task.title];
                       const isCreating = creatingIssueTitle === task.title;
+                      const selected = selectedTaskTitles.includes(task.title);
                       return (
                         <div key={task.title} className="rounded-2xl border border-slate-100 p-4">
                           <div className="mb-2 flex items-start justify-between gap-3">
-                            <h3 className="font-semibold text-slate-900">{task.title}</h3>
+                            <div className="flex items-start gap-3">
+                              <input
+                                type="checkbox"
+                                checked={selected}
+                                onChange={() => toggleTaskSelected(task.title)}
+                                disabled={Boolean(created) || bulkCreatingIssues || Boolean(creatingIssueTitle)}
+                                className="mt-1 h-4 w-4 rounded border-slate-300 text-slate-950"
+                              />
+                              <h3 className="font-semibold text-slate-900">{task.title}</h3>
+                            </div>
                             <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700">{task.priority}</span>
                           </div>
                           <p className="mb-4 text-sm text-slate-600">{task.reason}</p>
