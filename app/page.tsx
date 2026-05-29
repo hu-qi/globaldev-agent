@@ -1385,8 +1385,8 @@ export default function Home() {
       <footer className="mx-auto mt-12 max-w-7xl px-6 pb-8">
         <div className="border-t border-slate-200 pt-6">
           {sponsorPartners.length > 0 && (
-            <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-              <div className="flex w-full flex-col gap-3 md:w-auto md:flex-row md:flex-wrap md:justify-end">
+            <div className="mb-5">
+              <div className="flex w-full flex-col gap-3 md:flex-row md:flex-wrap md:justify-end">
                 {sponsorPartners.map((partner) =>
                   partner.imageSrc ? (
                     <a
@@ -1394,15 +1394,15 @@ export default function Home() {
                       href={partner.href}
                       target="_blank"
                       rel="noreferrer"
-                      className="block overflow-hidden rounded-2xl border border-slate-200 bg-white p-2 hover:bg-slate-50"
+                      className="block w-full max-w-[720px] overflow-hidden rounded-2xl border border-slate-200 bg-white p-2 hover:bg-slate-50"
                     >
                       <div
-                        className="relative w-full max-w-[720px]"
+                        className="relative w-full"
                         style={{
                           aspectRatio:
                             typeof partner.imageWidth === 'number' && typeof partner.imageHeight === 'number'
                               ? `${partner.imageWidth} / ${partner.imageHeight}`
-                              : '3 / 1'
+                              : '800 / 533'
                         }}
                       >
                         <Image
