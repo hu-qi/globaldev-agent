@@ -44,6 +44,10 @@ export type BulkIssueResult =
   | { title: string; status: 'skipped'; reason: string }
   | { title: string; status: 'failed'; error: string };
 
+export type BulkIssueProgressEvent =
+  | { type: 'start'; total: number }
+  | { type: 'item'; index: number; total: number; result: BulkIssueResult };
+
 function octokit() {
   return new Octokit({ auth: process.env.GITHUB_TOKEN || undefined });
 }
@@ -188,13 +192,18 @@ export async function createGrowthIssue(input: { repoUrl: string } & GrowthTaskI
   };
 }
 
-export async function createGrowthIssuesBulk(input: { repoUrl: string; tasks: GrowthTaskInput[] }): Promise<BulkIssueResult[]> {
+export async function createGrowthIssuesBulkWithProgress(
+  input: { repoUrl: string; tasks: GrowthTaskInput[] },
+  hooks?: { onEvent?: (event: BulkIssueProgressEvent) => void }
+): Promise<BulkIssueResult[]> {
   if (!process.env.GITHUB_TOKEN) {
     throw new Error('GITHUB_TOKEN is not configured. Add it to Vercel Environment Variables with Issues write permission.');
   }
 
   const ref = parseGitHubRepo(input.repoUrl);
   const client = octokit();
+
+  hooks?.onEvent?.({ type: 'start', total: input.tasks.length });
 
   const existing = await client.issues.listForRepo({
     owner: ref.owner,
@@ -219,12 +228,14 @@ export async function createGrowthIssuesBulk(input: { repoUrl: string; tasks: Gr
 
   const results: BulkIssueResult[] = [];
 
-  for (const task of input.tasks) {
+  for (const [idx, task] of input.tasks.entries()) {
     const title = growthIssueTitle(task.title);
     const key = growthIssueKey({ repoUrl: input.repoUrl, title: task.title, reason: task.reason });
 
     if (existingKeys.has(key) || existingTitles.has(title.trim().toLowerCase()) || existingTitles.has(task.title.trim().toLowerCase())) {
-      results.push({ title: task.title, status: 'skipped', reason: 'Already exists' });
+      const result: BulkIssueResult = { title: task.title, status: 'skipped', reason: 'Already exists' };
+      results.push(result);
+      hooks?.onEvent?.({ type: 'item', index: idx, total: input.tasks.length, result });
       continue;
     }
 
@@ -244,15 +255,23 @@ export async function createGrowthIssuesBulk(input: { repoUrl: string; tasks: Gr
         url: response.data.html_url
       };
 
-      results.push({ title: task.title, status: 'created', issue: created });
+      const result: BulkIssueResult = { title: task.title, status: 'created', issue: created };
+      results.push(result);
+      hooks?.onEvent?.({ type: 'item', index: idx, total: input.tasks.length, result });
       existingKeys.add(key);
       existingTitles.add(title.trim().toLowerCase());
       await sleep(250);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to create issue';
-      results.push({ title: task.title, status: 'failed', error: message });
+      const result: BulkIssueResult = { title: task.title, status: 'failed', error: message };
+      results.push(result);
+      hooks?.onEvent?.({ type: 'item', index: idx, total: input.tasks.length, result });
     }
   }
 
   return results;
+}
+
+export async function createGrowthIssuesBulk(input: { repoUrl: string; tasks: GrowthTaskInput[] }): Promise<BulkIssueResult[]> {
+  return createGrowthIssuesBulkWithProgress(input);
 }

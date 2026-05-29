@@ -279,6 +279,7 @@ export default function Home() {
   const [issueError, setIssueError] = useState<string | null>(null);
   const [selectedTaskTitles, setSelectedTaskTitles] = useState<string[]>([]);
   const [bulkIssueProgress, setBulkIssueProgress] = useState<{ done: number; total: number } | null>(null);
+  const [bulkIssueStats, setBulkIssueStats] = useState<{ created: number; skipped: number; failed: number } | null>(null);
   const [bulkCreatingIssues, setBulkCreatingIssues] = useState(false);
   const [rightPanel, setRightPanel] = useState<'launch' | 'ph' | 'rules' | 'tasks'>('launch');
   const [launchChannel, setLaunchChannel] = useState<'productHunt' | 'hackerNews' | 'reddit' | 'xThread' | 'linkedin'>('productHunt');
@@ -377,6 +378,7 @@ export default function Home() {
     setCreatedIssues({});
     setSelectedTaskTitles([]);
     setBulkIssueProgress(null);
+    setBulkIssueStats(null);
     setBulkCreatingIssues(false);
     setKit(null);
     setLoadingStartedAt(Date.now());
@@ -488,8 +490,83 @@ export default function Home() {
     setBulkCreatingIssues(true);
     setIssueError(null);
     setBulkIssueProgress({ done: 0, total: tasks.length });
+    setBulkIssueStats({ created: 0, skipped: 0, failed: 0 });
 
     try {
+      const streamResponse = await fetch('/api/github/issues/bulk/stream', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          repoUrl,
+          tasks: tasks.map((task) => ({ title: task.title, priority: task.priority, reason: task.reason }))
+        })
+      });
+
+      if (streamResponse.ok && streamResponse.body) {
+        const reader = streamResponse.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+          const chunk = await reader.read();
+          if (chunk.done) break;
+          buffer += decoder.decode(chunk.value, { stream: true });
+          const parts = buffer.split('\n\n');
+          buffer = parts.pop() || '';
+
+          for (const part of parts) {
+            const line = part
+              .split('\n')
+              .map((item) => item.trim())
+              .find((item) => item.startsWith('data: '));
+            if (!line) continue;
+
+            const payload = JSON.parse(line.slice('data: '.length)) as
+              | { type: 'progress'; event: { type: 'start'; total: number } }
+              | {
+                  type: 'progress';
+                  event: {
+                    type: 'item';
+                    index: number;
+                    total: number;
+                    result:
+                      | { title: string; status: 'created'; issue: CreatedIssue }
+                      | { title: string; status: 'skipped'; reason: string }
+                      | { title: string; status: 'failed'; error: string };
+                  };
+                }
+              | { type: 'done' }
+              | { type: 'error'; message: string };
+
+            if (payload.type === 'error') {
+              throw new Error(payload.message || 'Failed to create GitHub Issues.');
+            }
+
+            if (payload.type === 'progress' && payload.event.type === 'start') {
+              setBulkIssueProgress({ done: 0, total: payload.event.total });
+            }
+
+            if (payload.type === 'progress' && payload.event.type === 'item') {
+              setBulkIssueProgress({ done: payload.event.index + 1, total: payload.event.total });
+              const result = payload.event.result;
+              if (result.status === 'created') {
+                setCreatedIssues((current) => ({ ...current, [result.title]: result.issue }));
+                setBulkIssueStats((current) => (current ? { ...current, created: current.created + 1 } : current));
+              }
+              if (result.status === 'skipped') {
+                setBulkIssueStats((current) => (current ? { ...current, skipped: current.skipped + 1 } : current));
+              }
+              if (result.status === 'failed') {
+                setBulkIssueStats((current) => (current ? { ...current, failed: current.failed + 1 } : current));
+              }
+            }
+          }
+        }
+
+        setSelectedTaskTitles([]);
+        return;
+      }
+
       const response = await fetch('/api/github/issues/bulk', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -526,6 +603,7 @@ export default function Home() {
       }
 
       setBulkIssueProgress({ done: tasks.length, total: tasks.length });
+      setBulkIssueStats({ created: created.length, skipped: results.filter((item) => item.status === 'skipped').length, failed: failed.length });
       setSelectedTaskTitles([]);
     } catch (err) {
       setIssueError(err instanceof Error ? err.message : 'Failed to create GitHub Issues.');
@@ -997,6 +1075,11 @@ export default function Home() {
                       {bulkIssueProgress && (
                         <span className="rounded-full bg-blue-50 px-3 py-1.5 text-sm font-semibold text-blue-700">
                           {bulkIssueProgress.done}/{bulkIssueProgress.total}
+                        </span>
+                      )}
+                      {bulkIssueStats && (
+                        <span className="rounded-full bg-slate-50 px-3 py-1.5 text-sm font-semibold text-slate-700">
+                          {bulkIssueStats.created} created · {bulkIssueStats.skipped} skipped · {bulkIssueStats.failed} failed
                         </span>
                       )}
                     </div>
