@@ -699,8 +699,7 @@ export default function Home() {
             >
               {loading ? 'Agents are working...' : 'Generate Global Launch Kit'}
             </button>
-            <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
-              <span>Configure GMI_API_KEY and GITHUB_TOKEN on Vercel for the full live workflow.</span>
+            <div className="mt-3 flex justify-end text-xs text-slate-500">
               <a href="/results" className="font-semibold text-slate-950 underline underline-offset-4">
                 Browse results
               </a>
