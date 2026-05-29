@@ -211,6 +211,15 @@ function ExternalLinkIcon() {
   );
 }
 
+function ArrowRightIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M5 12h12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <path d="M13 6l6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 async function writeClipboard(text: string): Promise<void> {
   if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
     await navigator.clipboard.writeText(text);
@@ -285,6 +294,7 @@ export default function Home() {
   const [launchChannel, setLaunchChannel] = useState<'productHunt' | 'hackerNews' | 'reddit' | 'xThread' | 'linkedin'>('productHunt');
   const [communityChannel, setCommunityChannel] = useState<'hackerNews' | 'reddit'>('hackerNews');
   const [copyState, setCopyState] = useState<{ key: string; status: 'copied' | 'error' } | null>(null);
+  const [xReplyNextIndex, setXReplyNextIndex] = useState(1);
   const abortRef = useRef<AbortController | null>(null);
   const [loadingStartedAt, setLoadingStartedAt] = useState<number | null>(null);
   const [elapsedMs, setElapsedMs] = useState(0);
@@ -299,6 +309,14 @@ export default function Home() {
     const timer = window.setTimeout(() => setCopyState(null), 1500);
     return () => window.clearTimeout(timer);
   }, [copyState]);
+
+  useEffect(() => {
+    if (launchChannel !== 'xThread') {
+      setXReplyNextIndex(1);
+      return;
+    }
+    setXReplyNextIndex(1);
+  }, [launchChannel, kit]);
 
   useEffect(() => {
     if (!loading || !loadingStartedAt) return;
@@ -340,6 +358,14 @@ export default function Home() {
     if (launchChannel === 'linkedin') return 'linkedin' as const;
     return launchChannel as 'productHunt' | 'hackerNews' | 'reddit';
   }, [launchChannel]);
+
+  const xReplyBadge = useMemo(() => {
+    if (!kit || activeLaunchPlatform !== 'x') return null;
+    const total = kit.launchContent.xThread.length;
+    if (total <= 1) return null;
+    const next = Math.min(Math.max(1, xReplyNextIndex), total - 1) + 1;
+    return `${next}/${total}`;
+  }, [activeLaunchPlatform, kit, xReplyNextIndex]);
 
   async function onCopy(key: string, text: string) {
     try {
@@ -816,9 +842,30 @@ export default function Home() {
                   actions={
                     <div className="flex items-center gap-2">
                       {copyHint('launch')}
+                      {copyHint('launch-next')}
+                      {activeLaunchPlatform === 'x' && xReplyBadge && (
+                        <span className="rounded-full bg-slate-50 px-2 py-1 text-xs font-semibold text-slate-700">Next {xReplyBadge}</span>
+                      )}
                       <IconButton label="Copy" tone={copyTone('launch')} onClick={() => onCopy('launch', activeLaunchText)}>
                         <PlatformIcon platform={activeLaunchPlatform} />
                       </IconButton>
+                      {activeLaunchPlatform === 'x' && (
+                        <IconButton
+                          label="Copy next"
+                          tone={copyTone('launch-next')}
+                          onClick={() => {
+                            if (!kit) return;
+                            const total = kit.launchContent.xThread.length;
+                            if (total <= 1) return;
+                            const index = Math.min(Math.max(1, xReplyNextIndex), total - 1);
+                            const tweet = kit.launchContent.xThread[index];
+                            setXReplyNextIndex(index + 1 >= total ? 1 : index + 1);
+                            void onCopy('launch-next', tweet);
+                          }}
+                        >
+                          <ArrowRightIcon />
+                        </IconButton>
+                      )}
                       <IconButton
                         label="Publish"
                         onClick={() => {
@@ -845,6 +892,13 @@ export default function Home() {
                                   : undefined
                           });
                           openPublish(url);
+                          if (activeLaunchPlatform === 'x') {
+                            if (kit.launchContent.xThread.length > 1) {
+                              setXReplyNextIndex(2);
+                              void onCopy('launch-next', kit.launchContent.xThread[1]);
+                            }
+                            return;
+                          }
                           void onCopy('launch', activeLaunchText);
                         }}
                       >

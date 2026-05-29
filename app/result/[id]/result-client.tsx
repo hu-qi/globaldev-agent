@@ -85,6 +85,15 @@ function ExternalLinkIcon() {
   );
 }
 
+function ArrowRightIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M5 12h12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <path d="M13 6l6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 function IconButton({
   label,
   onClick,
@@ -268,12 +277,21 @@ export function ResultLaunchDraftsCard({
 }) {
   const [channel, setChannel] = useState<'productHunt' | 'hackerNews' | 'reddit' | 'xThread' | 'linkedin'>('productHunt');
   const [copyState, setCopyState] = useState<'copied' | 'error' | null>(null);
+  const [xReplyNextIndex, setXReplyNextIndex] = useState(1);
 
   useEffect(() => {
     if (!copyState) return;
     const timer = window.setTimeout(() => setCopyState(null), 1500);
     return () => window.clearTimeout(timer);
   }, [copyState]);
+
+  useEffect(() => {
+    if (channel !== 'xThread') {
+      setXReplyNextIndex(1);
+      return;
+    }
+    setXReplyNextIndex(1);
+  }, [channel, launchContent]);
 
   const activeText = useMemo(() => {
     if (channel === 'productHunt') return launchContent.productHunt;
@@ -289,10 +307,33 @@ export function ResultLaunchDraftsCard({
     return channel as 'productHunt' | 'hackerNews' | 'reddit';
   }, [channel]);
 
+  const xReplyBadge = useMemo(() => {
+    if (activePlatform !== 'x') return null;
+    const total = launchContent.xThread.length;
+    if (total <= 1) return null;
+    const next = Math.min(Math.max(1, xReplyNextIndex), total - 1) + 1;
+    return `${next}/${total}`;
+  }, [activePlatform, launchContent, xReplyNextIndex]);
+
   async function onCopy() {
     try {
       await writeClipboard(activeText);
       setCopyState('copied');
+    } catch {
+      setCopyState('error');
+    }
+  }
+
+  async function onCopyNext() {
+    if (activePlatform !== 'x') return;
+    const total = launchContent.xThread.length;
+    if (total <= 1) return;
+    const index = Math.min(Math.max(1, xReplyNextIndex), total - 1);
+    const tweet = launchContent.xThread[index];
+    try {
+      await writeClipboard(tweet);
+      setCopyState('copied');
+      setXReplyNextIndex(index + 1 >= total ? 1 : index + 1);
     } catch {
       setCopyState('error');
     }
@@ -317,6 +358,15 @@ export function ResultLaunchDraftsCard({
       text: activePlatform === 'x' ? launchContent.xThread[0] : activePlatform === 'reddit' ? activeText : undefined
     });
     window.open(url, '_blank', 'noopener,noreferrer');
+    if (activePlatform === 'x') {
+      if (launchContent.xThread.length > 1) {
+        setXReplyNextIndex(2);
+        void writeClipboard(launchContent.xThread[1])
+          .then(() => setCopyState('copied'))
+          .catch(() => setCopyState('error'));
+      }
+      return;
+    }
     void onCopy();
   }
 
@@ -340,6 +390,14 @@ export function ResultLaunchDraftsCard({
           <IconButton label="Copy" tone={copyTone} onClick={onCopy}>
             <PlatformIcon platform={activePlatform} />
           </IconButton>
+          {activePlatform === 'x' && (
+            <>
+              {xReplyBadge && <span className="rounded-full bg-slate-50 px-2 py-1 text-xs font-semibold text-slate-700">Next {xReplyBadge}</span>}
+              <IconButton label="Copy next" tone={copyTone} onClick={onCopyNext}>
+                <ArrowRightIcon />
+              </IconButton>
+            </>
+          )}
           <IconButton label="Publish" onClick={onPublish}>
             <ExternalLinkIcon />
           </IconButton>
