@@ -407,12 +407,20 @@ export default function Home() {
     llm: 'pending' | 'running' | 'done';
     publish: 'pending' | 'running' | 'done' | 'skipped';
   }>({ repo: 'pending', llm: 'pending', publish: 'pending' });
+  const [activeSponsorPartner, setActiveSponsorPartner] = useState<PartnerLink | null>(null);
 
   useEffect(() => {
     if (!copyState) return;
     const timer = window.setTimeout(() => setCopyState(null), 1500);
     return () => window.clearTimeout(timer);
   }, [copyState]);
+
+  useEffect(() => {
+    if (sponsorPartners.length === 0) return;
+    const index = Math.floor(Math.random() * sponsorPartners.length);
+    const selected = sponsorPartners[index] || null;
+    setActiveSponsorPartner(selected);
+  }, []);
 
   useEffect(() => {
     if (kit || loading) return;
@@ -1436,12 +1444,10 @@ export default function Home() {
       </div>
       <footer className="mx-auto mt-12 max-w-7xl px-6 pb-8">
         <div className="border-t border-slate-200 pt-6">
-          {sponsorPartners.length > 0 && (
+          {activeSponsorPartner && (
             <div className="mb-5">
               <div className="mx-auto flex w-full max-w-3xl flex-col items-center justify-center gap-5">
-                {sponsorPartners.map((partner) => (
-                  <SponsorView key={partner.href} partner={partner} />
-                ))}
+                <SponsorView partner={activeSponsorPartner} />
               </div>
             </div>
           )}
