@@ -1,6 +1,7 @@
 'use client';
 
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
+import Image from 'next/image';
 
 type GrowthTask = {
   title: string;
@@ -679,7 +680,10 @@ export default function Home() {
       <div className="mx-auto max-w-7xl">
         <header className="mb-10 grid gap-8 rounded-[2rem] bg-slate-950 p-8 text-white shadow-xl md:grid-cols-[1.1fr_0.9fr] md:p-12">
           <div>
-            <p className="mb-4 text-sm font-semibold uppercase tracking-[0.3em] text-blue-300">GlobalDev Agent</p>
+            <div className="mb-4 flex items-center gap-3">
+              <Image src="/logo.png" alt="GlobalDev Agent" width={40} height={40} className="h-10 w-10 rounded-2xl bg-white/10 p-1" />
+              <p className="text-sm font-semibold uppercase tracking-[0.3em] text-blue-300">GlobalDev Agent</p>
+            </div>
             <h1 className="mb-5 text-4xl font-bold tracking-tight md:text-6xl">From README to Global Launch.</h1>
             <p className="max-w-2xl text-lg leading-8 text-slate-300">
               Paste a GitHub repository URL. The agent reads the project, analyzes overseas positioning, generates platform-native launch content, clusters issue feedback, and turns insights into GitHub Issues.
