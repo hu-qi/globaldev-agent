@@ -71,6 +71,7 @@ type PublicResultPreview = {
   createdAt: string;
   path: string;
   repoName: string;
+  ownerAvatarUrl: string | null;
   oneLiner: string;
 };
 
@@ -741,7 +742,22 @@ export default function Home() {
                   {latestResults.map((result) => (
                     <div key={result.id} className="flex flex-wrap items-start justify-between gap-4 rounded-2xl bg-slate-50 p-4">
                       <div>
-                        <p className="text-sm font-semibold text-slate-950">{result.repoName}</p>
+                        <div className="flex items-center gap-3">
+                          {result.ownerAvatarUrl ? (
+                            <Image
+                              src={result.ownerAvatarUrl}
+                              alt=""
+                              width={28}
+                              height={28}
+                              className="h-7 w-7 rounded-full border border-slate-200 bg-white object-cover"
+                            />
+                          ) : (
+                            <div className="flex h-7 w-7 items-center justify-center rounded-full border border-slate-200 bg-white text-xs font-semibold text-slate-600">
+                              {result.repoName.slice(0, 1).toUpperCase()}
+                            </div>
+                          )}
+                          <p className="text-sm font-semibold text-slate-950">{result.repoName}</p>
+                        </div>
                         <p className="mt-1 text-sm text-slate-700">{result.oneLiner}</p>
                         <p className="mt-2 text-xs text-slate-500">{new Date(result.createdAt).toLocaleString()}</p>
                       </div>

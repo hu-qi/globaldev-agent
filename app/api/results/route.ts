@@ -25,6 +25,7 @@ export async function GET(request: Request) {
         createdAt: result.createdAt,
         path: buildPrettyResultPath(result.repoUrl, result.id),
         repoName: result.kit.repo.name,
+        ownerAvatarUrl: result.kit.repo.ownerAvatarUrl ?? null,
         oneLiner: result.kit.positioning.oneLiner
       }))
     },
@@ -35,4 +36,3 @@ export async function GET(request: Request) {
     }
   );
 }
-

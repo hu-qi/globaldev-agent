@@ -10,6 +10,7 @@ export type RepoSnapshot = {
   ref: RepoRef;
   htmlUrl: string;
   name: string;
+  ownerAvatarUrl: string | null;
   description: string | null;
   stars: number;
   forks: number;
@@ -118,6 +119,7 @@ export async function fetchRepoSnapshot(input: string): Promise<RepoSnapshot> {
     ref,
     htmlUrl: repo.html_url,
     name: repo.name,
+    ownerAvatarUrl: repo.owner?.avatar_url || null,
     description: repo.description,
     stars: repo.stargazers_count,
     forks: repo.forks_count,

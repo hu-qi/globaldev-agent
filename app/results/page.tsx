@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { buildPrettyResultPath, isResultStoreConfigured, listPublishedResults } from '../../lib/resultStore';
 
 export default async function ResultsPage() {
@@ -32,7 +33,22 @@ export default async function ResultsPage() {
           <li key={result.id} className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
-                <h2 className="text-lg font-semibold text-slate-950">{result.kit.repo.name}</h2>
+                <div className="flex items-center gap-3">
+                  {result.kit.repo.ownerAvatarUrl ? (
+                    <Image
+                      src={result.kit.repo.ownerAvatarUrl}
+                      alt=""
+                      width={32}
+                      height={32}
+                      className="h-8 w-8 rounded-full border border-slate-200 bg-white object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-sm font-semibold text-slate-600">
+                      {result.kit.repo.name.slice(0, 1).toUpperCase()}
+                    </div>
+                  )}
+                  <h2 className="text-lg font-semibold text-slate-950">{result.kit.repo.name}</h2>
+                </div>
                 <p className="mt-2 text-sm text-slate-700">{result.kit.positioning.oneLiner}</p>
                 <p className="mt-3 text-xs text-slate-500">{new Date(result.createdAt).toLocaleString()}</p>
               </div>

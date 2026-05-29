@@ -5,6 +5,7 @@ export type LaunchKit = {
   repo: {
     name: string;
     url: string;
+    ownerAvatarUrl: string | null;
     description: string | null;
     language: string | null;
     stars: number;
@@ -82,6 +83,7 @@ function fallbackLaunchKit(snapshot: RepoSnapshot): LaunchKit {
     repo: {
       name: productName,
       url: snapshot.htmlUrl,
+      ownerAvatarUrl: snapshot.ownerAvatarUrl ?? null,
       description: snapshot.description,
       language: snapshot.language,
       stars: snapshot.stars,
