@@ -65,6 +65,14 @@ type LaunchKit = {
 
 const sampleRepo = 'https://github.com/hu-qi/globaldev-agent';
 
+type PublicResultPreview = {
+  id: string;
+  createdAt: string;
+  path: string;
+  repoName: string;
+  oneLiner: string;
+};
+
 function Card({ title, actions, children }: { title: string; actions?: React.ReactNode; children: React.ReactNode }) {
   return (
     <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -283,6 +291,8 @@ export default function Home() {
   const [kit, setKit] = useState<LaunchKit | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [latestResults, setLatestResults] = useState<PublicResultPreview[] | null>(null);
+  const [latestResultsError, setLatestResultsError] = useState(false);
   const [creatingIssueTitle, setCreatingIssueTitle] = useState<string | null>(null);
   const [createdIssues, setCreatedIssues] = useState<Record<string, CreatedIssue>>({});
   const [issueError, setIssueError] = useState<string | null>(null);
@@ -309,6 +319,31 @@ export default function Home() {
     const timer = window.setTimeout(() => setCopyState(null), 1500);
     return () => window.clearTimeout(timer);
   }, [copyState]);
+
+  useEffect(() => {
+    if (kit || loading) return;
+    if (latestResults || latestResultsError) return;
+    let alive = true;
+
+    void fetch('/api/results?limit=6')
+      .then(async (response) => {
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.error || 'Failed to load results.');
+        return (data.results || []) as PublicResultPreview[];
+      })
+      .then((results) => {
+        if (!alive) return;
+        setLatestResults(results);
+      })
+      .catch(() => {
+        if (!alive) return;
+        setLatestResultsError(true);
+      });
+
+    return () => {
+      alive = false;
+    };
+  }, [kit, latestResults, latestResultsError, loading]);
 
   useEffect(() => {
     if (launchChannel !== 'xThread') {
@@ -664,7 +699,12 @@ export default function Home() {
             >
               {loading ? 'Agents are working...' : 'Generate Global Launch Kit'}
             </button>
-            <p className="mt-3 text-xs text-slate-500">Configure GMI_API_KEY and GITHUB_TOKEN on Vercel for the full live workflow.</p>
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
+              <span>Configure GMI_API_KEY and GITHUB_TOKEN on Vercel for the full live workflow.</span>
+              <a href="/results" className="font-semibold text-slate-950 underline underline-offset-4">
+                Browse results
+              </a>
+            </div>
           </form>
         </header>
 
@@ -672,15 +712,52 @@ export default function Home() {
         {issueError && <div className="mb-8 rounded-2xl border border-red-200 bg-red-50 p-4 text-red-700">{issueError}</div>}
 
         {!kit && !loading && (
-          <div className="grid gap-4 md:grid-cols-3">
-            <Card title="1. Understand the repo">
-              <p className="text-slate-600">Reads README, metadata, topics, language, stars, forks, and recent issues.</p>
-            </Card>
-            <Card title="2. Generate launch assets">
-              <p className="text-slate-600">Creates Product Hunt, Hacker News, Reddit, X, and LinkedIn launch drafts.</p>
-            </Card>
-            <Card title="3. Convert feedback to issues">
-              <p className="text-slate-600">Clusters feedback into growth tasks and writes selected tasks back to GitHub Issues.</p>
+          <div className="space-y-6">
+            <div className="grid gap-4 md:grid-cols-3">
+              <Card title="1. Understand the repo">
+                <p className="text-slate-600">Reads README, metadata, topics, language, stars, forks, and recent issues.</p>
+              </Card>
+              <Card title="2. Generate launch assets">
+                <p className="text-slate-600">Creates Product Hunt, Hacker News, Reddit, X, and LinkedIn launch drafts.</p>
+              </Card>
+              <Card title="3. Convert feedback to issues">
+                <p className="text-slate-600">Clusters feedback into growth tasks and writes selected tasks back to GitHub Issues.</p>
+              </Card>
+            </div>
+
+            <Card
+              title="Public Results"
+              actions={
+                <a href="/results" className="rounded-full bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-200">
+                  View all
+                </a>
+              }
+            >
+              {latestResults && latestResults.length > 0 ? (
+                <div className="space-y-3">
+                  {latestResults.map((result) => (
+                    <div key={result.id} className="flex flex-wrap items-start justify-between gap-4 rounded-2xl bg-slate-50 p-4">
+                      <div>
+                        <p className="text-sm font-semibold text-slate-950">{result.repoName}</p>
+                        <p className="mt-1 text-sm text-slate-700">{result.oneLiner}</p>
+                        <p className="mt-2 text-xs text-slate-500">{new Date(result.createdAt).toLocaleString()}</p>
+                      </div>
+                      <a
+                        href={result.path}
+                        className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-slate-800 shadow-sm hover:bg-slate-100"
+                      >
+                        Open
+                      </a>
+                    </div>
+                  ))}
+                </div>
+              ) : latestResultsError ? (
+                <p className="text-sm text-slate-600">Unable to load results right now.</p>
+              ) : latestResults ? (
+                <p className="text-sm text-slate-600">No public results yet.</p>
+              ) : (
+                <p className="text-sm text-slate-600">Loading results…</p>
+              )}
             </Card>
           </div>
         )}
@@ -736,7 +813,50 @@ export default function Home() {
         )}
 
         {kit && (
-          <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
+          <div className="grid gap-6">
+            <Card
+              title="Shareable Result Link"
+              actions={
+                kit.result ? (
+                  <div className="flex flex-wrap items-center gap-2">
+                    {copyHint('result-link')}
+                    <IconButton
+                      label="Copy link"
+                      tone={copyTone('result-link')}
+                      onClick={() => {
+                        if (!kit.result) return;
+                        const absolute = new URL(kit.result.url, window.location.origin).toString();
+                        void onCopy('result-link', absolute);
+                      }}
+                    >
+                      <ExternalLinkIcon />
+                    </IconButton>
+                    <a
+                      href={kit.result.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="rounded-full bg-slate-950 px-4 py-2 text-sm font-semibold text-white"
+                    >
+                      Open
+                    </a>
+                  </div>
+                ) : (
+                  <a href="/results" className="rounded-full bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-800">
+                    View public results
+                  </a>
+                )
+              }
+            >
+              {kit.result ? (
+                <div className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-700">
+                  <span className="break-all font-mono">{new URL(kit.result.url, window.location.origin).toString()}</span>
+                </div>
+              ) : (
+                <p className="text-sm text-slate-600">Configure Upstash to publish an SEO-friendly result page at /r/&lt;owner-repo&gt;-&lt;id&gt;.</p>
+              )}
+            </Card>
+
+            <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
             <div className="space-y-6">
               <Card title="Repository Snapshot">
                 <a href={kit.repo.url} target="_blank" className="text-xl font-bold text-blue-700 underline-offset-4 hover:underline">
@@ -1200,6 +1320,7 @@ export default function Home() {
               )}
             </div>
           </div>
+        </div>
         )}
       </div>
     </main>
