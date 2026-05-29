@@ -1386,7 +1386,6 @@ export default function Home() {
         <div className="border-t border-slate-200 pt-6">
           {sponsorPartners.length > 0 && (
             <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Sponsors & Partners</p>
               <div className="flex w-full flex-col gap-3 md:w-auto md:flex-row md:flex-wrap md:justify-end">
                 {sponsorPartners.map((partner) =>
                   partner.imageSrc ? (
