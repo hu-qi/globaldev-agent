@@ -1396,14 +1396,24 @@ export default function Home() {
                       rel="noreferrer"
                       className="block overflow-hidden rounded-2xl border border-slate-200 bg-white p-2 hover:bg-slate-50"
                     >
-                      <Image
-                        src={partner.imageSrc}
-                        alt={partner.imageAlt || partner.name}
-                        width={partner.imageWidth || 720}
-                        height={partner.imageHeight || 240}
-                        className="h-auto w-full max-w-[720px]"
-                        unoptimized
-                      />
+                      <div
+                        className="relative w-full max-w-[720px]"
+                        style={{
+                          aspectRatio:
+                            typeof partner.imageWidth === 'number' && typeof partner.imageHeight === 'number'
+                              ? `${partner.imageWidth} / ${partner.imageHeight}`
+                              : '3 / 1'
+                        }}
+                      >
+                        <Image
+                          src={partner.imageSrc}
+                          alt={partner.imageAlt || partner.name}
+                          fill
+                          sizes="(max-width: 768px) 100vw, 720px"
+                          className="object-contain"
+                          unoptimized
+                        />
+                      </div>
                     </a>
                   ) : (
                     <a
