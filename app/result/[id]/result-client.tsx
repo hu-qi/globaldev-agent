@@ -181,7 +181,7 @@ function buildIntentUrl(input: {
 
   if (input.platform === 'x') {
     const text = truncateForUrl(input.text || '', 260);
-    return `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
+    return `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodedUrl}`;
   }
 
   if (input.platform === 'reddit') {
@@ -314,7 +314,7 @@ export function ResultLaunchDraftsCard({
                 : 'x',
       repoUrl,
       title: activePlatform === 'hackerNews' ? hnTitle : activePlatform === 'reddit' ? redditTitle : undefined,
-      text: activePlatform === 'x' || activePlatform === 'reddit' ? activeText : undefined
+      text: activePlatform === 'x' ? launchContent.xThread[0] : activePlatform === 'reddit' ? activeText : undefined
     });
     window.open(url, '_blank', 'noopener,noreferrer');
     void onCopy();
