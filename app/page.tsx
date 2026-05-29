@@ -75,6 +75,30 @@ type PublicResultPreview = {
   oneLiner: string;
 };
 
+type PartnerLink = {
+  name: string;
+  href: string;
+};
+
+const sponsorPartners: PartnerLink[] = (() => {
+  const raw = process.env.NEXT_PUBLIC_PARTNERS;
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .map((item) => {
+        if (!item || typeof item !== 'object') return null;
+        const candidate = item as { name?: unknown; href?: unknown };
+        if (typeof candidate.name !== 'string' || typeof candidate.href !== 'string') return null;
+        return { name: candidate.name, href: candidate.href } satisfies PartnerLink;
+      })
+      .filter((item): item is PartnerLink => Boolean(item));
+  } catch {
+    return [];
+  }
+})();
+
 function Card({ title, actions, children }: { title: string; actions?: React.ReactNode; children: React.ReactNode }) {
   return (
     <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -1342,6 +1366,39 @@ export default function Home() {
         </div>
         )}
       </div>
+      <footer className="mx-auto mt-12 max-w-7xl px-6 pb-8">
+        <div className="border-t border-slate-200 pt-6">
+          {sponsorPartners.length > 0 && (
+            <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Sponsors & Partners</p>
+              <div className="flex flex-wrap gap-2">
+                {sponsorPartners.map((partner) => (
+                  <a
+                    key={partner.href}
+                    href={partner.href}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                  >
+                    {partner.name}
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+          <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500">
+            <p>© {new Date().getFullYear()} GlobalDev Agent</p>
+            <div className="flex flex-wrap items-center gap-3">
+              <a href="/results" className="font-semibold text-slate-700 hover:text-slate-900">
+                Results
+              </a>
+              <a href={sampleRepo} target="_blank" rel="noreferrer" className="font-semibold text-slate-700 hover:text-slate-900">
+                GitHub
+              </a>
+            </div>
+          </div>
+        </div>
+      </footer>
     </main>
   );
 }
