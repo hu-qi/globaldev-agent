@@ -33,6 +33,7 @@ async function upstashRequest<T>(path: string, init?: RequestInit): Promise<T> {
   }
 
   const response = await fetch(`${url}/${path}`, {
+    cache: 'no-store',
     ...init,
     headers: {
       Authorization: `Bearer ${token}`,
