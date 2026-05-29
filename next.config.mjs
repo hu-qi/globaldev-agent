@@ -6,10 +6,17 @@ const nextConfig = {
     ignoreBuildErrors: true
   },
   images: {
+    dangerouslyAllowSVG: true,
+    contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
     remotePatterns: [
       {
         protocol: 'https',
         hostname: 'avatars.githubusercontent.com',
+        pathname: '/**'
+      },
+      {
+        protocol: 'https',
+        hostname: 'api.star-history.com',
         pathname: '/**'
       }
     ]

@@ -78,6 +78,10 @@ type PublicResultPreview = {
 type PartnerLink = {
   name: string;
   href: string;
+  imageSrc?: string;
+  imageAlt?: string;
+  imageWidth?: number;
+  imageHeight?: number;
 };
 
 const sponsorPartners: PartnerLink[] = (() => {
@@ -89,9 +93,21 @@ const sponsorPartners: PartnerLink[] = (() => {
     return parsed
       .map((item) => {
         if (!item || typeof item !== 'object') return null;
-        const candidate = item as { name?: unknown; href?: unknown };
+        const candidate = item as {
+          name?: unknown;
+          href?: unknown;
+          imageSrc?: unknown;
+          imageAlt?: unknown;
+          imageWidth?: unknown;
+          imageHeight?: unknown;
+        };
         if (typeof candidate.name !== 'string' || typeof candidate.href !== 'string') return null;
-        return { name: candidate.name, href: candidate.href } satisfies PartnerLink;
+        const partner: PartnerLink = { name: candidate.name, href: candidate.href };
+        if (typeof candidate.imageSrc === 'string') partner.imageSrc = candidate.imageSrc;
+        if (typeof candidate.imageAlt === 'string') partner.imageAlt = candidate.imageAlt;
+        if (typeof candidate.imageWidth === 'number' && Number.isFinite(candidate.imageWidth)) partner.imageWidth = candidate.imageWidth;
+        if (typeof candidate.imageHeight === 'number' && Number.isFinite(candidate.imageHeight)) partner.imageHeight = candidate.imageHeight;
+        return partner;
       })
       .filter((item): item is PartnerLink => Boolean(item));
   } catch {
@@ -1371,18 +1387,37 @@ export default function Home() {
           {sponsorPartners.length > 0 && (
             <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Sponsors & Partners</p>
-              <div className="flex flex-wrap gap-2">
-                {sponsorPartners.map((partner) => (
-                  <a
-                    key={partner.href}
-                    href={partner.href}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-                  >
-                    {partner.name}
-                  </a>
-                ))}
+              <div className="flex w-full flex-col gap-3 md:w-auto md:flex-row md:flex-wrap md:justify-end">
+                {sponsorPartners.map((partner) =>
+                  partner.imageSrc ? (
+                    <a
+                      key={partner.href}
+                      href={partner.href}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="block overflow-hidden rounded-2xl border border-slate-200 bg-white p-2 hover:bg-slate-50"
+                    >
+                      <Image
+                        src={partner.imageSrc}
+                        alt={partner.imageAlt || partner.name}
+                        width={partner.imageWidth || 720}
+                        height={partner.imageHeight || 240}
+                        className="h-auto w-full max-w-[720px]"
+                        unoptimized
+                      />
+                    </a>
+                  ) : (
+                    <a
+                      key={partner.href}
+                      href={partner.href}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                    >
+                      {partner.name}
+                    </a>
+                  )
+                )}
               </div>
             </div>
           )}
